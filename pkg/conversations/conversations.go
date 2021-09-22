@@ -1,6 +1,10 @@
 package conversations
 
-import "github.com/slack-go/slack"
+import (
+	"fmt"
+
+	"github.com/slack-go/slack"
+)
 
 // ThreadedReply joins `ref.Channel` and creates or adds to the message's thread.
 func ThreadedReply(ref slack.ItemRef, message string, api slack.Client) (string, string, error) {
@@ -17,6 +21,10 @@ func ThreadedReply(ref slack.ItemRef, message string, api slack.Client) (string,
 	})
 	if err != nil {
 		return "", "", err
+	}
+
+	if len(op.Messages) != 1 {
+		return "", "", fmt.Errorf("message not found")
 	}
 
 	// use the correct timestamp for starting or posting to a
