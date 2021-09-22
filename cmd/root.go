@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/xortim/bones/conf"
+	"github.com/xortim/penny/conf"
 )
 
 var cfgFile string
@@ -16,10 +17,10 @@ func newRootCmd() *cobra.Command {
 	return &cobra.Command{
 		Version: conf.GitVersion,
 		Use:     conf.Executable,
-		Short:   "Bones is a bot for Slack's Events API",
-		Long:    `Bones helps community admins do their job.`,
+		Short:   "Penny is a community moderation bot.",
+		Long:    `Penny helps community admins do their job.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+			_ = cmd.Help()
 		},
 	}
 }
@@ -38,7 +39,7 @@ func Execute() {
 }
 
 func setupFlags(c *cobra.Command) {
-	c.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gadget.yaml)")
+	c.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default \"$HOME/."+conf.Executable+".yaml\")")
 	c.MarkPersistentFlagFilename("config")
 
 	c.PersistentFlags().StringSlice("global_admins", []string{}, "A string list of global admin UUIDs.")
@@ -51,6 +52,18 @@ func setupFlags(c *cobra.Command) {
 	c.PersistentFlags().String("slack_signing_secret", "", "Slack secret used for message signing.")
 	viper.BindPFlag("slack.signing_secret", c.PersistentFlags().Lookup("slack_signing_secret"))
 	viper.BindEnv("slack.signing_secret", "SLACK_SIGNING_SECRET")
+
+	c.PersistentFlags().String("spam_feed_channel", "spam-feed", "Slack channel where Racji App reports SPAM posts.")
+	viper.BindPFlag("spam_feed.channel", c.PersistentFlags().Lookup("spam_feed.channel"))
+
+	c.PersistentFlags().String("spam_feed_emoji", "no_good", "Slack emoji configured for Racji App to report SPAM posts.")
+	viper.BindPFlag("spam_feed.emoji", c.PersistentFlags().Lookup("spam_feed.emoji"))
+
+	c.PersistentFlags().String("spam_feed_reaction_emoji", "thumbsup", "The reaction Penny adds to the reported spam-feed post with.")
+	viper.BindPFlag("spam_feed.reaction_emoji", c.PersistentFlags().Lookup("spam_feed.reaction_emoji"))
+
+	c.PersistentFlags().String("spam_feed_response", "", "Threaded message response to the feed message. If empty, no thread is started.")
+	viper.BindPFlag("spam_feed.response", c.PersistentFlags().Lookup("spam_feed.response"))
 }
 
 func addSubcommands(c *cobra.Command) {
@@ -69,15 +82,18 @@ func initConfig() {
 		}
 
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".gadget")
+		viper.SetConfigName("." + conf.Executable)
 	}
 
 	viper.SetTypeByDefaultValue(true)
-	viper.SetEnvPrefix("GADGET")
+	viper.SetEnvPrefix(conf.Executable)
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		println("Using config file:", viper.ConfigFileUsed())
+		println("Using config file: ", viper.ConfigFileUsed())
 	}
+
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 }

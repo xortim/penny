@@ -2,7 +2,7 @@ package conf
 
 var (
 	// Executable is overridden by Makefile
-	Executable = "NotSet"
+	Executable = "penny"
 
 	// GitVersion is overridden by Makefile
 	GitVersion = "NoSet"

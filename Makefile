@@ -9,7 +9,7 @@ GOLDFLAGS   ?= -s -w -X $(PACKAGENAME)/conf.Executable=$(EXECUTABLE) -X $(PACKAG
 GOBUILD     ?= CGO_ENABLED=0 $(GO) build -ldflags="$(GOLDFLAGS)"
 GO_FILES    := $(shell find . -type f -name '*.go')
 
-EXECUTABLE  := bones
+EXECUTABLE  := penny
 ARTIFACT    := dist/$(GOOS)-$(GOARCH)/$(EXECUTABLE)
 
 DB_PASS      ?= $(shell openssl rand -hex 16)
@@ -69,7 +69,7 @@ tools: ## Install tools needed for development
 .PHONY: start-db
 start-db: ## Start maria db - export DB_ROOT_PASS and DB_PASS to set credentials
 	@$(MAKE) --no-print-directory log-$@
-	@docker run --name $(EXECUTABLE)-mariadb \
+	docker run --name $(EXECUTABLE)-mariadb \
 		-v ${HOME}/.$(EXECUTABLE)/db:/var/lib/mysql \
 		-e MARIADB_ROOT_PASSWORD="${DB_ROOT_PASS}" \
 		-e MARIADB_DATABASE=$(EXECUTABLE)_dev \

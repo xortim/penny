@@ -1,0 +1,55 @@
+_metadata:
+  major_version: 1
+  minor_version: 1
+display_information:
+  name: penny
+  description: A community moderation bot.
+  background_color: "#1f807b"
+features:
+  bot_user:
+    display_name: penny
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:manage
+      - channels:read
+      - chat:write
+      - chat:write.customize
+      - chat:write.public
+      - commands
+      - emoji:read
+      - groups:history
+      - groups:read
+      - groups:write
+      - im:history
+      - im:read
+      - im:write
+      - links:read
+      - mpim:history
+      - mpim:read
+      - reactions:read
+      - reactions:write
+      - users.profile:read
+      - users:read
+      - users:read.email
+      - channels:join
+settings:
+  event_subscriptions:
+    request_url: https://2b2c-76-182-189-176.ngrok.io/gadget
+    bot_events:
+      - app_home_opened
+      - app_mention
+      - channel_created
+      - link_shared
+      - member_joined_channel
+      - message.channels
+      - message.groups
+      - message.im
+      - reaction_added
+      - team_join
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

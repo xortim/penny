@@ -2,8 +2,13 @@ package cmd
 
 import (
 	gadget "github.com/gadget-bot/gadget/core"
+	"github.com/gadget-bot/gadget/plugins/user_info"
+	"github.com/gadget-bot/gadget/router"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/xortim/penny/conf"
+	"github.com/xortim/penny/gadgets/hallmonitor"
 )
 
 func newServerCmd() *cobra.Command {
@@ -21,11 +26,17 @@ func newServerCmd() *cobra.Command {
 }
 
 func server(cmd *cobra.Command, args []string) error {
-	myBot := gadget.Setup()
+	myBot, err := gadget.Setup()
+	if err != nil {
+		return err
+	}
 
-	// Plugin handlers go here
-	myBot.Run()
-	return nil
+	myBot.Router.AddMentionRoutes(user_info.GetMentionRoutes())
+	myBot.Router.ChannelMessageRoutes = make(map[string]router.ChannelMessageRoute)
+
+	myBot.Router.AddChannelMessageRoutes(hallmonitor.GetChannelMessageRoutes())
+
+	return myBot.Run()
 }
 
 func setupServerFlags(c *cobra.Command) {
@@ -34,21 +45,21 @@ func setupServerFlags(c *cobra.Command) {
 	viper.RegisterAlias("server.port", "listen.port")
 	viper.SetDefault("server.port", 3000)
 
-	c.PersistentFlags().String("db.hostname", "localhost", "The host for gadget's DB.")
+	c.PersistentFlags().String("db.hostname", "localhost", "The host for "+conf.Executable+"'s DB.")
 	viper.BindPFlag("db.hostname", c.PersistentFlags().Lookup("db.hostname"))
 	viper.RegisterAlias("db.hostname", "db.host")
 	viper.SetDefault("db.hostname", "localhost")
 
-	c.PersistentFlags().String("db.name", "gadget", "The name for gadget's DB.")
+	c.PersistentFlags().String("db.name", conf.Executable, "The name for "+conf.Executable+"'s DB.")
 	viper.BindPFlag("db.name", c.PersistentFlags().Lookup("db.name"))
-	viper.SetDefault("db.name", "gadget")
+	viper.SetDefault("db.name", conf.Executable)
 
-	c.PersistentFlags().String("db.username", "", "The username for gadget's DB.")
+	c.PersistentFlags().String("db.username", "", "The username for "+conf.Executable+"'s DB.")
 	viper.BindPFlag("db.username", c.PersistentFlags().Lookup("db.username"))
 	viper.RegisterAlias("db.username", "db.user")
-	viper.SetDefault("db.username", "gadget")
+	viper.SetDefault("db.username", conf.Executable)
 
-	c.PersistentFlags().String("db.password", "", "The password for gadget's DB.")
+	c.PersistentFlags().String("db.password", "", "The password for "+conf.Executable+"'s DB.")
 	viper.BindPFlag("db.password", c.PersistentFlags().Lookup("db.password"))
 	viper.RegisterAlias("db.pass", "db.pass")
 }

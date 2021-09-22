@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/xortim/bones/conf"
+	"github.com/xortim/penny/conf"
 )
 
 func newVersionCmd() *cobra.Command {

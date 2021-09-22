@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/xortim/bones/cmd"
+	"github.com/xortim/penny/cmd"
 )
 
 func main() {
