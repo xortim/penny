@@ -5,6 +5,7 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/spf13/viper"
+	"github.com/xortim/penny/pkg/conversations"
 	"github.com/xortim/penny/pkg/parsers"
 )
 
@@ -59,48 +60,17 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 	}
 
 	if len(viper.GetString("spam_feed.response")) != 0 {
-		_, _, err = threadedReply(spamFeedMsgRef, viper.GetString("spam_feed.response"), api)
+		_, _, err = conversations.ThreadedReply(spamFeedMsgRef, viper.GetString("spam_feed.response"), api)
 		if err != nil {
 			println(err.Error())
 		}
 	}
 
 	opRef := parsers.NewRefToMessageFromPermalink(message)
-	_, _, err = threadedReply(opRef, "This message has been flagged by our community as SPAM. The admins have been notified.", api)
+	_, _, err = conversations.ThreadedReply(opRef, "This message has been flagged by our community as SPAM. The admins have been notified.", api)
 	if err != nil {
 		println(err.Error())
 	}
 
-	_, _, _ = threadedReply(opRef, "Second reply", api)
-}
-
-func threadedReply(ref slack.ItemRef, message string, api slack.Client) (string, string, error) {
-	_, _, _, err := api.JoinConversation(ref.Channel)
-	if err != nil {
-		println(err.Error())
-	}
-
-	op, err := api.GetConversationHistory(&slack.GetConversationHistoryParameters{
-		ChannelID: ref.Channel,
-		Latest:    ref.Timestamp,
-		Limit:     1,
-		Inclusive: true,
-	})
-	if err != nil {
-		return "", "", err
-	}
-
-	// use the correct timestamp for starting or posting to a
-	// thread. otherwise the bot _could_ modify the original message
-	// which causes it to show up in the top-level conversation
-	ts := ref.Timestamp
-	if len(op.Messages[0].ThreadTimestamp) != 0 {
-		ts = op.Messages[0].ThreadTimestamp
-	}
-
-	return api.PostMessage(
-		ref.Channel,
-		slack.MsgOptionTS(ts),
-		slack.MsgOptionText(message, false),
-	)
+	_, _, _ = conversations.ThreadedReply(opRef, "Second reply", api)
 }
