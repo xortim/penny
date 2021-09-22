@@ -2,6 +2,7 @@ package conversations
 
 import "github.com/slack-go/slack"
 
+// ThreadedReply joins `ref.Channel` and creates or adds to the message's thread.
 func ThreadedReply(ref slack.ItemRef, message string, api slack.Client) (string, string, error) {
 	_, _, _, err := api.JoinConversation(ref.Channel)
 	if err != nil {
