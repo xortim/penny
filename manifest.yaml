@@ -48,7 +48,6 @@ settings:
       - message.channels
       - message.groups
       - message.im
-      - reaction_added
       - team_join
   org_deploy_enabled: false
   socket_mode_enabled: false
