@@ -2,7 +2,6 @@ package cmd
 
 import (
 	gadget "github.com/gadget-bot/gadget/core"
-	"github.com/gadget-bot/gadget/plugins/user_info"
 	"github.com/gadget-bot/gadget/router"
 
 	"github.com/spf13/cobra"
@@ -31,9 +30,7 @@ func server(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	myBot.Router.AddMentionRoutes(user_info.GetMentionRoutes())
 	myBot.Router.ChannelMessageRoutes = make(map[string]router.ChannelMessageRoute)
-
 	myBot.Router.AddChannelMessageRoutes(hallmonitor.GetChannelMessageRoutes())
 
 	return myBot.Run()

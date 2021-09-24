@@ -6,38 +6,58 @@ import (
 	"github.com/slack-go/slack"
 )
 
-// ThreadedReply joins `ref.Channel` and creates or adds to the message's thread.
-func ThreadedReply(ref slack.ItemRef, message string, api slack.Client) (string, string, error) {
-	_, _, _, err := api.JoinConversation(ref.Channel)
+// ThreadedReplyToMsgRef delegates to MsgRefToMessage and ThreadedReplyToMsg
+func ThreadedReplyToMsgRef(ref slack.ItemRef, reply string, api slack.Client) (string, string, error) {
+	message, err := MsgRefToMessage(ref, api)
 	if err != nil {
 		return "", "", err
 	}
 
-	op, err := api.GetConversationHistory(&slack.GetConversationHistoryParameters{
+	return ThreadedReplyToMsg(message, reply, api)
+}
+
+// MsgRefToMessage joins the channel in the message reference and returns the found Message struct
+func MsgRefToMessage(ref slack.ItemRef, api slack.Client) (slack.Message, error) {
+	message := &slack.Message{}
+	_, _, _, err := api.JoinConversation(ref.Channel)
+	if err != nil {
+		return *message, err
+	}
+
+	response, err := api.GetConversationHistory(&slack.GetConversationHistoryParameters{
 		ChannelID: ref.Channel,
 		Latest:    ref.Timestamp,
 		Limit:     1,
 		Inclusive: true,
 	})
 	if err != nil {
-		return "", "", err
+		return *message, err
 	}
 
-	if len(op.Messages) != 1 {
-		return "", "", fmt.Errorf("message not found")
+	if len(response.Messages) != 1 {
+		return *message, fmt.Errorf("message not found")
 	}
 
-	// use the correct timestamp for starting or posting to a
-	// thread. otherwise the bot _could_ modify the original message
-	// which causes it to show up in the top-level conversation
-	ts := ref.Timestamp
-	if len(op.Messages[0].ThreadTimestamp) != 0 {
-		ts = op.Messages[0].ThreadTimestamp
+	message = &response.Messages[0]
+	message.Channel = ref.Channel
+
+	return *message, nil
+}
+
+func ThreadedReplyToMsg(msg slack.Message, reply string, api slack.Client) (string, string, error) {
+	// Use the correct timestamp for starting or posting to a
+	// thread. Otherwise the bot _could_ modify the message
+	// which causes it to show up in the top-level conversation.
+	// This happens if you try to reply to a message already in
+	// a thread.
+	ts := msg.Timestamp
+	if len(msg.ThreadTimestamp) != 0 {
+		ts = msg.ThreadTimestamp
 	}
 
 	return api.PostMessage(
-		ref.Channel,
+		msg.Channel,
 		slack.MsgOptionTS(ts),
-		slack.MsgOptionText(message, false),
+		slack.MsgOptionText(reply, false),
 	)
 }
