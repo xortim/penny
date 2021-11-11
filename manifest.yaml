@@ -11,6 +11,9 @@ features:
     always_online: true
 oauth_config:
   scopes:
+    user:
+      - search:read
+      - chat:write
     bot:
       - app_mentions:read
       - channels:history
@@ -38,7 +41,7 @@ oauth_config:
       - channels:join
 settings:
   event_subscriptions:
-    request_url: https://2b2c-76-182-189-176.ngrok.io/gadget
+    request_url: https://your.domain.tld/gadget
     bot_events:
       - app_home_opened
       - app_mention
