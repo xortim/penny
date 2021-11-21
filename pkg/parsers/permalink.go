@@ -2,26 +2,33 @@ package parsers
 
 import (
 	"fmt"
-	"regexp"
+	"net/url"
+	"strings"
 
 	"github.com/slack-go/slack"
 )
 
-var (
-	chatPermaLink = regexp.MustCompile(`^<?https://[^/]+/archives/(?P<channel>[^/]+)/p(?P<ts>[^/>]+)>?$`)
-)
+// NewRefToMessageFromPermalink converts a permalink to slack.ItemRef and determines if it is a threaded reply or not
+func NewRefToMessageFromPermalink(str string) (slack.ItemRef, bool) {
+	u, _ := url.Parse(str)
+	pathParts := strings.Split(u.Path, "/")
+	query, _ := url.ParseQuery(u.RawQuery)
 
-// ChatPermalinkToMsgRef converts a permalink to slack.ItemRef
-func NewRefToMessageFromPermalink(url string) slack.ItemRef {
 	ref := &slack.ItemRef{}
 
-	matches := chatPermaLink.FindStringSubmatch(url)
-
-	if len(matches) != 0 {
-		l := len(matches[2])
-		ref.Channel = matches[1]
-		ref.Timestamp = fmt.Sprintf("%s.%s", matches[2][:l-6], matches[2][l-6:l])
+	if len(pathParts) != 0 {
+		ref.Channel = pathParts[2]
+		ref.Timestamp = PermalinkPathTS(pathParts[3])
 	}
 
-	return *ref
+	return *ref, query.Has("thread_ts")
+}
+
+// PremalinkPathTS expects the string timestamp representation from a permalink.
+// this is the Timestamp but without any decimal and prefixed with p
+func PermalinkPathTS(str string) string {
+	str = strings.TrimPrefix(str, "p")
+	l := len(str)
+	// the ts format has 6 digits after the deciminal.
+	return fmt.Sprintf("%s.%s", str[:l-6], str[l-6:l])
 }
