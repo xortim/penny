@@ -63,8 +63,11 @@ func setupFlags(c *cobra.Command) {
 	c.PersistentFlags().String("spam_feed_emoji", "no_entry_sign", "Slack emoji configured for Racji App to report SPAM posts.")
 	viper.BindPFlag("spam_feed.emoji", c.PersistentFlags().Lookup("spam_feed_emoji"))
 
-	c.PersistentFlags().String("spam_feed_reaction_emoji", "no_good", "The reaction Penny adds to the reported spam-feed post with.")
-	viper.BindPFlag("spam_feed.reaction_emoji", c.PersistentFlags().Lookup("spam_feed_reaction_emoji"))
+	c.PersistentFlags().String("spam_feed_reaction_emoji_miss", "shrug", "The reaction Penny adds to the reported spam-feed post if below max_anomaly_score")
+	viper.BindPFlag("spam_feed.reaction_emoji_miss", c.PersistentFlags().Lookup("spam_feed_reaction_emoji_miss"))
+
+	c.PersistentFlags().String("spam_feed_reaction_emoji_hit", "no_good", "The reaction Penny adds to the reported spam-feed post if above max_anomaly_score.")
+	viper.BindPFlag("spam_feed.reaction_emoji_hit", c.PersistentFlags().Lookup("spam_feed_reaction_emoji_hit"))
 
 	c.PersistentFlags().String("reacji_response", "", "Threaded message response to the Reacji feed message. If empty, no thread is started.")
 	viper.BindPFlag("spam_feed.reacji_response", c.PersistentFlags().Lookup("reacji_response"))
