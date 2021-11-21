@@ -35,14 +35,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		return
 	}
 
-	// // this stopped working as some point.. ev.Icons.IconEmoji is empty
-	// // only look at the messages the messages with the configured reaction from Reacji
-	// if ev.Icons != nil && ev.Icons.IconEmoji != viper.GetString("spam_feed.emoji") {
-	// 	return
-	// }
-
 	// only look at messages in the correct channel.
-	// this performs another API request so we do this later than the other checks
 	channelInfo, err := api.GetConversationInfo(ev.Channel, false)
 	if err != nil {
 		print("there was error when getting the conversation information: ")
@@ -60,17 +53,9 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		return
 	}
 
-	if len(viper.GetString("spam_feed.reaction_emoji")) != 0 {
-		err = api.AddReaction(viper.GetString("spam_feed.reaction_emoji"), spamFeedMsgRef)
-		if err != nil {
-			println(err.Error())
-		}
-	}
-
 	if len(viper.GetString("spam_feed.reacji_response")) != 0 {
 		_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, viper.GetString("spam_feed.reacji_response"), api)
 		if err != nil {
-
 			println(err.Error())
 		}
 	}
@@ -111,21 +96,16 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		}
 	}
 
-	if len(reasons) != 0 {
-		debugResponse := "This is what I found about the OP:\n"
-		for _, v := range reasons {
-			debugResponse += fmt.Sprintf("- %s\n", v)
-		}
-		if removed {
-			debugResponse += fmt.Sprintf("I removed the OP since the final anomaly score (%d/%d) was suspect enough.", score, viper.GetInt("spam_feed.max_anomaly_score"))
-		} else {
-			debugResponse += fmt.Sprintf("The final anomaly score (%d/%d) didn't result in a removal.", score, viper.GetInt("spam_feed.max_anomaly_score"))
-		}
-		_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, debugResponse, api)
-		if err != nil {
-			print("there was an error when replying to the spam-feed message: ")
-			println(err.Error())
-		}
+	err = addAnomalyReaction(removed, spamFeedMsgRef, api)
+	if err != nil {
+		print("there wasn error when adding the anomaly reaction: ")
+		println(err.Error())
+	}
+
+	err = addDebugResponse(removed, score, reasons, spamFeedMsg, api)
+	if err != nil {
+		print("there was an error when replying to the spam-feed message: ")
+		println(err.Error())
 	}
 }
 
@@ -202,4 +182,35 @@ func userTzScore(uid string, api slack.Client) (int, error) {
 		return viper.GetInt("spam_feed.anomaly_scores.outside_tz"), nil
 	}
 	return 0, nil
+}
+
+func addAnomalyReaction(removed bool, msgRef slack.ItemRef, api slack.Client) error {
+	emoji_conf := "spam_feed.reaction_emoji_miss"
+	if removed {
+		emoji_conf = "spam_feed.reaction_emoji_hit"
+	}
+	if len(viper.GetString(emoji_conf)) != 0 {
+		err := api.AddReaction(viper.GetString(emoji_conf), msgRef)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func addDebugResponse(removed bool, score int, reasons []string, msg slack.Message, api slack.Client) error {
+	var err error
+	if len(reasons) != 0 {
+		debugResponse := "This is what I found about the OP:\n"
+		for _, v := range reasons {
+			debugResponse += fmt.Sprintf("- %s\n", v)
+		}
+		if removed {
+			debugResponse += fmt.Sprintf("I removed the OP since the final anomaly score (%d/%d) was suspect enough.", score, viper.GetInt("spam_feed.max_anomaly_score"))
+		} else {
+			debugResponse += fmt.Sprintf("The final anomaly score (%d/%d) didn't result in a removal.", score, viper.GetInt("spam_feed.max_anomaly_score"))
+		}
+		_, _, err = conversations.ThreadedReplyToMsg(msg, debugResponse, api)
+	}
+	return err
 }
