@@ -26,6 +26,7 @@ func MsgRefToMessage(ref slack.ItemRef, api slack.Client) (slack.Message, error)
 
 	response, err := api.GetConversationHistory(&slack.GetConversationHistoryParameters{
 		ChannelID: ref.Channel,
+		Oldest:    ref.Timestamp,
 		Latest:    ref.Timestamp,
 		Limit:     1,
 		Inclusive: true,
@@ -38,9 +39,17 @@ func MsgRefToMessage(ref slack.ItemRef, api slack.Client) (slack.Message, error)
 		return *message, fmt.Errorf("message not found")
 	}
 
+	// if the timestamps don't match something went horribly wrong
+	// when can this happen? when the message ref is from a reply/thread
+	// the GetConverstationHistory API call doesn't included threaded replies 🤷
+	// so I'm going to assume that if you have a MsgRef you know the exact timestamp
+	// and these should match.
+	if response.Messages[0].Timestamp != ref.Timestamp {
+		return *message, fmt.Errorf("message not found")
+	}
+
 	message = &response.Messages[0]
 	message.Channel = ref.Channel
-
 	return *message, nil
 }
 

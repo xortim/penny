@@ -3,6 +3,7 @@ package hallmonitor
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gadget-bot/gadget/router"
 	"github.com/rs/zerolog/log"
@@ -48,7 +49,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 	spamFeedMsgRef := slack.NewRefToMessage(ev.Channel, ev.TimeStamp)
 	spamFeedMsg, err := conversations.MsgRefToMessage(spamFeedMsgRef, api)
 	if err != nil {
-		print("could not get a message object from the message reference: ")
+		print("could not get a message object from the spam-feed message reference: ")
 		println(err.Error())
 		return
 	}
@@ -60,11 +61,25 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		}
 	}
 
-	opMsgRef := parsers.NewRefToMessageFromPermalink(message)
+	opMsgRef, opThreaded := parsers.NewRefToMessageFromPermalink(strings.Trim(message, "<>"))
+	if opThreaded {
+		_, _, _ = conversations.ThreadedReplyToMsg(spamFeedMsg, "I currently don't handle threaded replies.", api)
+		// TODO: https://api.slack.com/messaging/retrieving#pulling_threads
+		return
+	}
+
 	opMsg, err := conversations.MsgRefToMessage(opMsgRef, api)
 	if err != nil {
-		print("could not get a message object from the message reference: ")
-		println(err.Error())
+		_, _, _ = conversations.ThreadedReplyToMsg(spamFeedMsg, "I couldn't retrieve the original message from the Slack API.", api)
+	}
+
+	if opMsg.User == router.BotUID {
+		_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, "Hey! That's not nice.", api)
+		if err != nil {
+			print("could not reply to spam feed message: ")
+			println(err.Error())
+		}
+		return
 	}
 
 	removed := false
@@ -83,6 +98,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		userTokenApi := slack.New(viper.GetString("slack.user_oauth_token"))
 		_, _, err = userTokenApi.DeleteMessage(opMsg.Channel, opMsg.Timestamp)
 		if err != nil {
+			print("could not delete message " + opMsg.Channel + "/" + opMsg.Timestamp + ": ")
 			println(err.Error())
 		}
 		removed = true
