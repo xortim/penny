@@ -16,12 +16,14 @@ func NewRefToMessageFromPermalink(str string) (slack.ItemRef, bool) {
 
 	ref := &slack.ItemRef{}
 
+	ts := PermalinkPathTS(pathParts[3])
 	if len(pathParts) != 0 {
 		ref.Channel = pathParts[2]
-		ref.Timestamp = PermalinkPathTS(pathParts[3])
+		ref.Timestamp = ts
 	}
 
-	return *ref, query.Has("thread_ts")
+	isReply := query.Get("thread_ts") != "" && query.Get("thread_ts") != ts
+	return *ref, isReply
 }
 
 // PremalinkPathTS expects the string timestamp representation from a permalink.

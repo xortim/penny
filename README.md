@@ -59,9 +59,9 @@ as environment variables.
 | Value                | Gadget ENV             | Penny Key                    |
 | -------------------- | ---------------------- | ---------------------------- |
 | Database Host        | `GADGET_DB_HOST`       | `db.host`                    |
-| Database Name        | `GADGET_DB_NAME`       | `db_name`                    |
-| Database Password    | `GADGET_DB_PASS`       | `db_pass`                    |
-| Database Username    | `GADGET_DB_USER`       | `db_user`                    |
+| Database Name        | `GADGET_DB_NAME`       | `db.name`                    |
+| Database Password    | `GADGET_DB_PASS`       | `db.pass`                    |
+| Database Username    | `GADGET_DB_USER`       | `db.user`                    |
 | Global Admins        | `GADGET_GLOBAL_ADMINS` | `slack.global_admins`        |
 | Server Port          | `GADGET_SERVER_PORT`   | `server.port`                |
 | Signing Secret       | `SLACK_SIGNING_SECRET` | `slack.signing_secret`       |
@@ -141,7 +141,7 @@ statefulness and duplicate all the nice logic this app provides in addition to
 working around the limitations of their public API (like persistently joining
 public channels to monitor all reactions.)
 
-Install the [Reacji-Channel App](reacji-channeler.builtbyslack.com) and
+Install the [Reacji-Channel App](https://reacji-channeler.builtbyslack.com) and
 configure it to re-post messages with your desired reaction to the
 `spam_feed.channel` channel.
 
