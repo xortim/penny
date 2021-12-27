@@ -32,9 +32,6 @@ Once in the settings, follow these steps:
    you'll be hosting Penny.
 
 Not done yet. You'll need a couple of values that Slack generated for your bot.
-There's a table in in the Configuration section for how to set these.
-
-### Classic
 
 On your App's settings navigate to "Basic Information" and grab the Signing
 secret.
@@ -42,64 +39,10 @@ secret.
 Under the "OAuth & Permissions" page, grab both the "User OAuth Token" and "Bot
 User OAuth Token"
 
-### New
-
-Slack is changing how Apps are configured. This will get updated later.
-
 ## Configuration
 
-Penny uses Viper for configuration. Gadget does not. This will be easier later,
-but for now you need to configure two things. Gadget, and Penny.
-
-[Penny honors](https://github.com/xortim/penny/blob/develop/cmd/root.go) the
-Gadget environment variables for the following keys. This is to support passing
-configuring into Gadget from Penny at a later date. These values **must** be set
-as environment variables.
-
-| Value                | Gadget ENV             | Penny Key                    |
-| -------------------- | ---------------------- | ---------------------------- |
-| Database Host        | `GADGET_DB_HOST`       | `db.host`                    |
-| Database Name        | `GADGET_DB_NAME`       | `db.name`                    |
-| Database Password    | `GADGET_DB_PASS`       | `db.pass`                    |
-| Database Username    | `GADGET_DB_USER`       | `db.user`                    |
-| Global Admins        | `GADGET_GLOBAL_ADMINS` | `slack.global_admins`        |
-| Server Port          | `GADGET_SERVER_PORT`   | `server.port`                |
-| Signing Secret       | `SLACK_SIGNING_SECRET` | `slack.signing_secret`       |
-| User OAuth Token     | `SLACK_OAUTH_TOKEN`    | `slack.user_oauth_token`     |
-
-
-The following values must be set as Penny configuration keys:
-
-| Value                | Gadget ENV             | Penny Key                    |
-| -------------------- | ---------------------- | ---------------------------- |
-| Bot User OAuth Token | n/a                    | `slack.bot_oauth_token`      |
-
-
-If this is all confusing. That's because it is. I don't know what I'm doing.
-
-
-Example `.env` file for Gadget:
-
-```
-export SLACK_OAUTH_TOKEN=xoxb-XXXXXXXXXXX-XXXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX
-export SLACK_SIGNING_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-export GADGET_GLOBAL_ADMINS=U0Z6G0BTM
-export GADGET_SERVER_PORT=3000
-
-# The mariaDB container want's no GADGET_ prefix. Gadget Does. Sorry :(
-export DB_USER=penny
-export DB_NAME=penny_dev
-export DB_PASS=XXXXXXXX
-export DB_ROOT_PASS=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-export GADGET_DB_HOST=localhost
-export GADGET_DB_USER=${DB_USER}
-export GADGET_DB_NAME=${DB_NAME}
-export GADGET_DB_PASS=${DB_PASS}
-```
-
-**NOTE**: Once compiled, simply run `penny --help` for guidance on the
-configuration.
+Penny uses Viper for configuration. For a complete list of configurations run 
+`penny serve --help`.
 
 The easiest way to configure Penny is with a yaml file. Place this in
 `${HOME}/.penny.yaml` and modify it to suit your needs.
@@ -107,7 +50,20 @@ The easiest way to configure Penny is with a yaml file. Place this in
 ```yaml
 ---
 slack:
+  user_oauth_token: xoxp-XXXXXXXXXXX-XXXXXXXXXXX-XXXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   bot_oauth_token: xoxb-XXXXXXXXXXX-XXXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX
+  signing_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  global_admins:
+    - U0Z6G0BTM
+
+server:
+  port: 3000
+
+db:
+  name: penny_dev
+  hostname: localhost
+  username: penny
+  password: DATABASEPASSWORD
 
 # monitor messages marked as spam.
 # This requires the use of the Reacji-Channel App
@@ -159,6 +115,16 @@ that container. Read the `Makefile` for more information. Once you do that, run
 `make build` (or use your IDE to launch Penny for debugging). Personally, I use
 `ngrok` and update the Bot's configuration in my test organization accordingly.
 This gets you request inspection and logs.
+
+In order to use the `start-db` Makefile target you'll want to set the following
+environment variables to match your Penny configuration.
+
+```shell
+export DB_USER=penny
+export DB_NAME=penny_dev
+export DB_PASS=XXXXXXXX
+export DB_ROOT_PASS=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
 
 ## Production
 

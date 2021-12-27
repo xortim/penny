@@ -35,15 +35,6 @@ services:
       - ./config/penny.yaml:/penny.yaml
     depends_on:
       - mariadb
-    environment:
-      SLACK_OAUTH_TOKEN: xoxb-XXX...
-      SLACK_SIGNING_SECRET: SIGNGINGSECRET
-      GADGET_GLOBAL_ADMINS: U0ZFOOBAR
-      GADGET_SERVER_PORT: 3000
-      GADGET_DB_HOST: mariadb
-      GADGET_DB_USER: penny
-      GADGET_DB_NAME: penny
-      GADGET_DB_PASS: RANDOMPASSWORD
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.penny.rule=Host(`penny.domain.tld`)"
@@ -61,4 +52,3 @@ services:
       MARIADB_PASSWORD: RANDOMPASSWORD
     volumes:
       - ./db:/var/lib/mysql
-
