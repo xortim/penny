@@ -25,7 +25,15 @@ func newServerCmd() *cobra.Command {
 }
 
 func server(cmd *cobra.Command, args []string) error {
-	myBot, err := gadget.Setup()
+	myBot, err := gadget.SetupWithConfig(
+		viper.GetString("slack.bot_oauth_token"),
+		viper.GetString("slack.signing_secret"),
+		viper.GetString("db.username"),
+		viper.GetString("db.password"),
+		viper.GetString("db.hostname"),
+		viper.GetString("db.name"),
+		viper.GetString("db.port"),
+		viper.GetStringSlice("slack.global_admins"))
 	if err != nil {
 		return err
 	}
