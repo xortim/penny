@@ -50,21 +50,21 @@ func setupServerFlags(c *cobra.Command) {
 	viper.RegisterAlias("server.port", "listen.port")
 	viper.SetDefault("server.port", 3000)
 
-	c.PersistentFlags().String("db.hostname", "localhost", "The host for "+conf.Executable+"'s DB.")
-	viper.BindPFlag("db.hostname", c.PersistentFlags().Lookup("db.hostname"))
-	viper.RegisterAlias("db.hostname", "db.host")
+	c.PersistentFlags().String("db_hostname", "localhost", "The host for "+conf.Executable+"'s DB.")
+	viper.BindPFlag("db.hostname", c.PersistentFlags().Lookup("db_hostname"))
+	viper.RegisterAlias("db.host", "db.hostname")
 	viper.SetDefault("db.hostname", "localhost")
 
-	c.PersistentFlags().String("db.name", conf.Executable, "The name for "+conf.Executable+"'s DB.")
-	viper.BindPFlag("db.name", c.PersistentFlags().Lookup("db.name"))
+	c.PersistentFlags().String("db_name", conf.Executable, "The name for "+conf.Executable+"'s DB.")
+	viper.BindPFlag("db.name", c.PersistentFlags().Lookup("db_name"))
 	viper.SetDefault("db.name", conf.Executable)
 
-	c.PersistentFlags().String("db.username", "", "The username for "+conf.Executable+"'s DB.")
-	viper.BindPFlag("db.username", c.PersistentFlags().Lookup("db.username"))
-	viper.RegisterAlias("db.username", "db.user")
+	c.PersistentFlags().String("db_username", "", "The username for "+conf.Executable+"'s DB.")
+	viper.BindPFlag("db.username", c.PersistentFlags().Lookup("db_username"))
+	viper.RegisterAlias("db.user", "db.username")
 	viper.SetDefault("db.username", conf.Executable)
 
-	c.PersistentFlags().String("db.password", "", "The password for "+conf.Executable+"'s DB.")
-	viper.BindPFlag("db.password", c.PersistentFlags().Lookup("db.password"))
-	viper.RegisterAlias("db.pass", "db.pass")
+	c.PersistentFlags().String("db_password", "", "The password for "+conf.Executable+"'s DB.")
+	viper.BindPFlag("db.password", c.PersistentFlags().Lookup("db_password"))
+	viper.RegisterAlias("db.pass", "db.password")
 }
