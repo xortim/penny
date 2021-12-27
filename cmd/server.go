@@ -47,7 +47,7 @@ func server(cmd *cobra.Command, args []string) error {
 func setupServerFlags(c *cobra.Command) {
 	c.PersistentFlags().IntP("port", "p", 3000, "The port on which the bot should bind.")
 	viper.BindPFlag("server.port", c.PersistentFlags().Lookup("port"))
-	viper.RegisterAlias("server.port", "listen.port")
+	viper.RegisterAlias("listen.port", "server.port")
 	viper.SetDefault("server.port", 3000)
 
 	c.PersistentFlags().String("db_hostname", "localhost", "The host for "+conf.Executable+"'s DB.")
