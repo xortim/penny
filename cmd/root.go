@@ -60,6 +60,9 @@ func setupFlags(c *cobra.Command) {
 	c.PersistentFlags().String("spam_feed_channel", "spam-feed", "Slack channel where Racji App reports SPAM posts.")
 	viper.BindPFlag("spam_feed.channel", c.PersistentFlags().Lookup("spam_feed_channel"))
 
+	c.PersistentFlags().String("spam_feed_assistance_channel_id", "", "Slack channel ID for assistance with SPAM posts.")
+	viper.BindPFlag("spam_feed.assistance_channel_id", c.PersistentFlags().Lookup("spam_feed_assistance_channel_id"))
+
 	c.PersistentFlags().String("spam_feed_emoji", "no_entry_sign", "Slack emoji configured for Racji App to report SPAM posts.")
 	viper.BindPFlag("spam_feed.emoji", c.PersistentFlags().Lookup("spam_feed_emoji"))
 
