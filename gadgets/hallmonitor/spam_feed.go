@@ -15,12 +15,18 @@ import (
 )
 
 const (
-	BOT_MESSAGE_TYPE       = "bot_message"
-	REACJI_USERNAME        = "Reacji Channeler"
-	ACTIVITY_LOW_WATERMARK = 10
-
-	OP_REMOVAL_REPLY = `Your message was reported by the community as SPAM and I've removed this post. Please join #admin-assistance channel if you have questions.`
+	BOT_MESSAGE_TYPE = "bot_message"
+	REACJI_USERNAME  = "Reacji Channeler"
 )
+
+func removalReply() string {
+	message := "Your message was reported by the community as SPAM and I've removed this post."
+
+	if len(viper.GetString("spam_feed.assistance_channel_id")) != 0 {
+		message = fmt.Sprintf("%s. Please join <#%s> if you have questions.", message, viper.GetString("spam_feed.assistance_channel_id"))
+	}
+	return message
+}
 
 func monitorSpamFeedMessages() *router.ChannelMessageRoute {
 	var pluginRoute router.ChannelMessageRoute
@@ -90,7 +96,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 	}
 
 	if score >= viper.GetInt("spam_feed.max_anomaly_score") {
-		_, _, err = conversations.ThreadedReplyToMsg(opMsg, OP_REMOVAL_REPLY, api)
+		_, _, err = conversations.ThreadedReplyToMsg(opMsg, removalReply(), api)
 		if err != nil {
 			print("there was an error when replying to OP message: ")
 			println(err.Error())
