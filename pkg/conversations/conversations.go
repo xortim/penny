@@ -64,9 +64,22 @@ func ThreadedReplyToMsg(msg slack.Message, reply string, api slack.Client) (stri
 		ts = msg.ThreadTimestamp
 	}
 
+	// https://api.slack.com/methods/chat.postMessage#args
 	return api.PostMessage(
 		msg.Channel,
 		slack.MsgOptionTS(ts),
 		slack.MsgOptionText(reply, false),
 	)
+}
+
+// WhoReactedWith returns the list of users which have applied the specified reaction to the provided message
+func WhoReactedWith(msg slack.Message, reactionName string) []string {
+	users := make([]string, 0)
+	for _, r := range msg.Reactions {
+		if r.Name == reactionName {
+			users = append(users, r.Users...)
+			break
+		}
+	}
+	return users
 }

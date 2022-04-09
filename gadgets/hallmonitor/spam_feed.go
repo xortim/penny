@@ -60,13 +60,6 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		return
 	}
 
-	if len(viper.GetString("spam_feed.reacji_response")) != 0 {
-		_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, viper.GetString("spam_feed.reacji_response"), api)
-		if err != nil {
-			println(err.Error())
-		}
-	}
-
 	opMsgRef, opThreaded := parsers.NewRefToMessageFromPermalink(strings.Trim(message, "<>"))
 	if opThreaded {
 		_, _, _ = conversations.ThreadedReplyToMsg(spamFeedMsg, "I currently don't handle threaded replies.", api)
@@ -77,6 +70,24 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 	opMsg, err := conversations.MsgRefToMessage(opMsgRef, api)
 	if err != nil {
 		_, _, _ = conversations.ThreadedReplyToMsg(spamFeedMsg, "I couldn't retrieve the original message from the Slack API.", api)
+	}
+
+	reporters := conversations.WhoReactedWith(opMsg, viper.GetString("spam_feed.emoji"))
+	for i, r := range reporters {
+		reporters[i] = fmt.Sprintf("<@%s>", r)
+	}
+
+	// acknowledge the users that reported message
+	ack := ""
+	if len(reporters) != 0 {
+		ack = fmt.Sprintf("Thanks %s! ", strings.Join(reporters, ","))
+	}
+	if len(viper.GetString("spam_feed.reacji_response")) != 0 {
+		ack = fmt.Sprintf("%s%s", ack, viper.GetString("spam_feed.reacji_response"))
+	}
+	_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, ack, api)
+	if err != nil {
+		println(err.Error())
 	}
 
 	if opMsg.User == router.BotUID {
