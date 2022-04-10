@@ -72,10 +72,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		_, _, _ = conversations.ThreadedReplyToMsg(spamFeedMsg, "I couldn't retrieve the original message from the Slack API.", api)
 	}
 
-	reporters := conversations.WhoReactedWith(opMsg, viper.GetString("spam_feed.emoji"))
-	for i, r := range reporters {
-		reporters[i] = fmt.Sprintf("<@%s>", r)
-	}
+	reporters := conversations.WhoReactedWithAsMention(opMsg, viper.GetString("spam_feed.emoji"))
 
 	// acknowledge the users that reported message
 	ack := ""

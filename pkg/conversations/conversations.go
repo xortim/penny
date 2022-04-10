@@ -83,3 +83,12 @@ func WhoReactedWith(msg slack.Message, reactionName string) []string {
 	}
 	return users
 }
+
+// WhoReactedWithAsMention delegates to WhoReactedWith and transforms the elements to mrkdown formatted mentions
+func WhoReactedWithAsMention(msg slack.Message, reactionName string) []string {
+	mentions := WhoReactedWith(msg, reactionName)
+	for i, r := range mentions {
+		mentions[i] = fmt.Sprintf("<@%s>", r)
+	}
+	return mentions
+}
