@@ -184,7 +184,7 @@ func userActivityScore(uid string) (int, error) {
 		return 0, nil
 	}
 
-	searchQuery := fmt.Sprintf("from:@%s", uid)
+	searchQuery := fmt.Sprintf("after:2021/12/01 from:@%s", uid)
 
 	results, err := api.SearchMessages(searchQuery, slack.NewSearchParameters())
 	if err != nil {
