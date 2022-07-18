@@ -257,9 +257,3 @@ func addDebugResponse(removed bool, score int, reasons []string, msg slack.Messa
 	}
 	return err
 }
-
-func getUserInfo(uid string, api *slack.Client) (*slack.User, error) {
-	user, err := api.GetUserInfo(uid)
-
-	return user, err
-}
