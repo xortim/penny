@@ -184,14 +184,7 @@ func userActivityScore(uid string) (int, error) {
 		return 0, nil
 	}
 
-	// this is a workaround until we can determine what is causing UIDs from non-admin
-	// accounts from not registering for search.message requests
-	u, err := getUserInfo(uid, api)
-	if err != nil {
-		return 0, err
-	}
-
-	searchQuery := fmt.Sprintf("after:2021/12/01 from:@%s", u.Name)
+	searchQuery := fmt.Sprintf("after:2021/12/01 from:<@%s>", uid)
 
 	results, err := api.SearchMessages(searchQuery, slack.NewSearchParameters())
 	if err != nil {
@@ -250,10 +243,4 @@ func addDebugResponse(removed bool, score int, reasons []string, msg slack.Messa
 		_, _, err = conversations.ThreadedReplyToMsg(msg, debugResponse, api)
 	}
 	return err
-}
-
-func getUserInfo(uid string, api *slack.Client) (*slack.User, error) {
-	user, err := api.GetUserInfo(uid)
-
-	return user, err
 }
