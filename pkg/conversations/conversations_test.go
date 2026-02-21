@@ -1,11 +1,29 @@
 package conversations
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/slack-go/slack"
+	"github.com/xortim/penny/pkg/slackclient"
 )
+
+// noopJoin is a JoinConversation stub that always succeeds.
+func noopJoin(channelID string) (*slack.Channel, string, []string, error) {
+	return &slack.Channel{}, "", nil, nil
+}
+
+// historyWith returns a GetConversationHistory stub that returns a single message with the given timestamp.
+func historyWith(ts string) func(*slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+	return func(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+		return &slack.GetConversationHistoryResponse{
+			Messages: []slack.Message{
+				{Msg: slack.Msg{Timestamp: ts}},
+			},
+		}, nil
+	}
+}
 
 func TestWhoReactedWith(t *testing.T) {
 	type args struct {
@@ -209,4 +227,191 @@ func TestWhoReactedWithAsMention(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMsgRefToMessage(t *testing.T) {
+	ref := slack.NewRefToMessage("C123", "1234567890.000100")
+
+	tests := []struct {
+		name      string
+		mock      *slackclient.MockClient
+		wantErr   string
+		wantChan  string
+		wantTS    string
+	}{
+		{
+			name: "JoinConversation error",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: func(channelID string) (*slack.Channel, string, []string, error) {
+					return nil, "", nil, errors.New("join failed")
+				},
+			},
+			wantErr: "join failed",
+		},
+		{
+			name: "GetConversationHistory error",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: noopJoin,
+				GetConversationHistoryFn: func(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+					return nil, errors.New("history failed")
+				},
+			},
+			wantErr: "history failed",
+		},
+		{
+			name: "No messages in response",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: noopJoin,
+				GetConversationHistoryFn: func(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+					return &slack.GetConversationHistoryResponse{Messages: []slack.Message{}}, nil
+				},
+			},
+			wantErr: "message not found",
+		},
+		{
+			name: "Timestamp mismatch",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: noopJoin,
+				GetConversationHistoryFn: func(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+					return &slack.GetConversationHistoryResponse{
+						Messages: []slack.Message{
+							{Msg: slack.Msg{Timestamp: "9999999999.000000"}},
+						},
+					}, nil
+				},
+			},
+			wantErr: "message not found",
+		},
+		{
+			name: "Happy path",
+			mock: &slackclient.MockClient{
+				JoinConversationFn:       noopJoin,
+				GetConversationHistoryFn: historyWith("1234567890.000100"),
+			},
+			wantChan: "C123",
+			wantTS:   "1234567890.000100",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := MsgRefToMessage(ref, tt.mock)
+			if tt.wantErr != "" {
+				if err == nil || err.Error() != tt.wantErr {
+					t.Errorf("MsgRefToMessage() error = %v, wantErr %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("MsgRefToMessage() unexpected error: %v", err)
+			}
+			if got.Channel != tt.wantChan {
+				t.Errorf("MsgRefToMessage() Channel = %q, want %q", got.Channel, tt.wantChan)
+			}
+			if got.Timestamp != tt.wantTS {
+				t.Errorf("MsgRefToMessage() Timestamp = %q, want %q", got.Timestamp, tt.wantTS)
+			}
+		})
+	}
+}
+
+func TestThreadedReplyToMsg(t *testing.T) {
+	tests := []struct {
+		name       string
+		msg        slack.Message
+		postMsgErr error
+		wantChan   string
+		wantErr    bool
+	}{
+		{
+			name: "Non-threaded message uses Timestamp",
+			msg: slack.Message{
+				Msg: slack.Msg{Timestamp: "1111111111.000100", Channel: "C_TEST"},
+			},
+			wantChan: "C_TEST",
+		},
+		{
+			name: "Threaded message uses ThreadTimestamp",
+			msg: slack.Message{
+				Msg: slack.Msg{
+					Timestamp:       "1111111111.000100",
+					ThreadTimestamp: "1111111110.000100",
+					Channel:         "C_TEST",
+				},
+			},
+			wantChan: "C_TEST",
+		},
+		{
+			name: "PostMessage error propagated",
+			msg: slack.Message{
+				Msg: slack.Msg{Timestamp: "1111111111.000100", Channel: "C_TEST"},
+			},
+			postMsgErr: errors.New("post failed"),
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			called := false
+			calledChan := ""
+			mock := &slackclient.MockClient{
+				PostMessageFn: func(channelID string, options ...slack.MsgOption) (string, string, error) {
+					called = true
+					calledChan = channelID
+					return channelID, "1111111111.000100", tt.postMsgErr
+				},
+			}
+
+			_, _, err := ThreadedReplyToMsg(tt.msg, "reply text", mock)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("ThreadedReplyToMsg() expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("ThreadedReplyToMsg() unexpected error: %v", err)
+			}
+			if !called {
+				t.Errorf("ThreadedReplyToMsg() PostMessage not called")
+			}
+			if calledChan != tt.wantChan {
+				t.Errorf("ThreadedReplyToMsg() PostMessage channel = %q, want %q", calledChan, tt.wantChan)
+			}
+		})
+	}
+}
+
+func TestThreadedReplyToMsgRef(t *testing.T) {
+	ref := slack.NewRefToMessage("C123", "1234567890.000100")
+
+	t.Run("MsgRefToMessage error propagated", func(t *testing.T) {
+		mock := &slackclient.MockClient{
+			JoinConversationFn: func(channelID string) (*slack.Channel, string, []string, error) {
+				return nil, "", nil, errors.New("join failed")
+			},
+		}
+		_, _, err := ThreadedReplyToMsgRef(ref, "reply", mock)
+		if err == nil || err.Error() != "join failed" {
+			t.Errorf("ThreadedReplyToMsgRef() error = %v, want 'join failed'", err)
+		}
+	})
+
+	t.Run("Success path returns channel and ts from PostMessage", func(t *testing.T) {
+		mock := &slackclient.MockClient{
+			JoinConversationFn:       noopJoin,
+			GetConversationHistoryFn: historyWith("1234567890.000100"),
+			PostMessageFn: func(channelID string, options ...slack.MsgOption) (string, string, error) {
+				return "C123", "1234567890.000100", nil
+			},
+		}
+		ch, ts, err := ThreadedReplyToMsgRef(ref, "reply", mock)
+		if err != nil {
+			t.Fatalf("ThreadedReplyToMsgRef() unexpected error: %v", err)
+		}
+		if ch != "C123" || ts != "1234567890.000100" {
+			t.Errorf("ThreadedReplyToMsgRef() = (%q, %q), want (C123, 1234567890.000100)", ch, ts)
+		}
+	})
 }

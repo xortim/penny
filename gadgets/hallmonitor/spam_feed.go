@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xortim/penny/pkg/conversations"
 	"github.com/xortim/penny/pkg/parsers"
+	"github.com/xortim/penny/pkg/slackclient"
 )
 
 const (
@@ -36,7 +37,15 @@ func monitorSpamFeedMessages() *router.ChannelMessageRoute {
 	return &pluginRoute
 }
 
-func handleSpamFeedMessage(router router.Router, route router.Route, api slack.Client, ev slackevents.MessageEvent, message string) {
+// handleSpamFeedMessage is the Gadget-registered handler. Its signature is fixed by the framework.
+func handleSpamFeedMessage(r router.Router, route router.Route, api slack.Client, ev slackevents.MessageEvent, message string) {
+	userApi := slack.New(viper.GetString("slack.user_oauth_token"))
+	ProcessSpamFeedMessage(r, route, &api, userApi, ev, message)
+}
+
+// ProcessSpamFeedMessage contains the testable core logic extracted from handleSpamFeedMessage.
+// Exported so that integration tests can inject both API clients.
+func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient.Client, userApi slackclient.Client, ev slackevents.MessageEvent, message string) {
 	// only look at the original, unfurled message
 	if ev.SubType != BOT_MESSAGE_TYPE && ev.Username != REACJI_USERNAME {
 		return
@@ -87,7 +96,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 		println(err.Error())
 	}
 
-	if opMsg.User == router.BotUID {
+	if opMsg.User == r.BotUID {
 		_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, "Hey! That's not nice.", api)
 		if err != nil {
 			print("could not reply to spam feed message: ")
@@ -97,7 +106,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 	}
 
 	removed := false
-	score, reasons, err := AnomalyScore(opMsgRef, api)
+	score, reasons, err := anomalyScoreInternal(opMsgRef, api, userApi)
 	if err != nil {
 		print("there was an error when calculating the anomaly score: ")
 		println(err.Error())
@@ -109,8 +118,7 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 			print("there was an error when replying to OP message: ")
 			println(err.Error())
 		}
-		userTokenApi := slack.New(viper.GetString("slack.user_oauth_token"))
-		_, _, err = userTokenApi.DeleteMessage(opMsg.Channel, opMsg.Timestamp)
+		_, _, err = userApi.DeleteMessage(opMsg.Channel, opMsg.Timestamp)
 		if err != nil {
 			print("could not delete message " + opMsg.Channel + "/" + opMsg.Timestamp + ": ")
 			println(err.Error())
@@ -139,8 +147,14 @@ func handleSpamFeedMessage(router router.Router, route router.Route, api slack.C
 	}
 }
 
-// AnomalyScore returns the calculated anomaly score for the provided ItemRef
+// AnomalyScore returns the calculated anomaly score for the provided ItemRef.
+// It is a thin wrapper that creates the user-token client and delegates to anomalyScoreInternal.
 func AnomalyScore(ref slack.ItemRef, api slack.Client) (int, []string, error) {
+	userApi := slack.New(viper.GetString("slack.user_oauth_token"))
+	return anomalyScoreInternal(ref, &api, userApi)
+}
+
+func anomalyScoreInternal(ref slack.ItemRef, api slackclient.Client, userApi slackclient.Client) (int, []string, error) {
 	reasons := make([]string, 0)
 	score := viper.GetInt("spam_feed.anomaly_scores.reported")
 	if score != 0 {
@@ -152,7 +166,7 @@ func AnomalyScore(ref slack.ItemRef, api slack.Client) (int, []string, error) {
 		return score, reasons, err
 	}
 
-	activityScore, err := userActivityScore(opMsg.User)
+	activityScore, err := userActivityScore(opMsg.User, userApi)
 	if err != nil {
 		print("an error occured when retriving the user activity: ")
 		println(err.Error())
@@ -176,10 +190,9 @@ func AnomalyScore(ref slack.ItemRef, api slack.Client) (int, []string, error) {
 	return score, reasons, nil
 }
 
-// userActivityScore performs a public activity search for the specified user and returns the configured anomaly score if the total results are below the low watermark
-// this must use the user oauth token so it initializes a new slack client each time
-func userActivityScore(uid string) (int, error) {
-	api := slack.New(viper.GetString("slack.user_oauth_token"))
+// userActivityScore performs a public activity search for the specified user and returns
+// the configured anomaly score if the total results are below the low watermark.
+func userActivityScore(uid string, api slackclient.Client) (int, error) {
 	if viper.GetInt("spam_feed.activity_low_watermark") == 0 {
 		return 0, nil
 	}
@@ -198,7 +211,7 @@ func userActivityScore(uid string) (int, error) {
 	return 0, nil
 }
 
-func userTzScore(uid string, api slack.Client) (int, error) {
+func userTzScore(uid string, api slackclient.Client) (int, error) {
 	if len(viper.GetString("spam_feed.local_timezone")) == 0 {
 		return 0, nil
 	}
@@ -214,7 +227,7 @@ func userTzScore(uid string, api slack.Client) (int, error) {
 	return 0, nil
 }
 
-func addAnomalyReaction(removed bool, msgRef slack.ItemRef, api slack.Client) error {
+func addAnomalyReaction(removed bool, msgRef slack.ItemRef, api slackclient.Client) error {
 	emoji_conf := "spam_feed.reaction_emoji_miss"
 	if removed {
 		emoji_conf = "spam_feed.reaction_emoji_hit"
@@ -228,7 +241,7 @@ func addAnomalyReaction(removed bool, msgRef slack.ItemRef, api slack.Client) er
 	return nil
 }
 
-func addDebugResponse(removed bool, score int, reasons []string, msg slack.Message, api slack.Client) error {
+func addDebugResponse(removed bool, score int, reasons []string, msg slack.Message, api slackclient.Client) error {
 	var err error
 	if len(reasons) != 0 {
 		debugResponse := "This is what I found about the OP:\n"
