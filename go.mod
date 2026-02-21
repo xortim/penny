@@ -1,6 +1,6 @@
 module github.com/xortim/penny
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/gadget-bot/gadget v0.2.2
