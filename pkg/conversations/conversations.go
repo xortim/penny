@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"github.com/slack-go/slack"
+	"github.com/xortim/penny/pkg/slackclient"
 )
 
 // ThreadedReplyToMsgRef delegates to MsgRefToMessage and ThreadedReplyToMsg
-func ThreadedReplyToMsgRef(ref slack.ItemRef, reply string, api slack.Client) (string, string, error) {
+func ThreadedReplyToMsgRef(ref slack.ItemRef, reply string, api slackclient.Client) (string, string, error) {
 	message, err := MsgRefToMessage(ref, api)
 	if err != nil {
 		return "", "", err
@@ -17,7 +18,7 @@ func ThreadedReplyToMsgRef(ref slack.ItemRef, reply string, api slack.Client) (s
 }
 
 // MsgRefToMessage joins the channel in the message reference and returns the found Message struct
-func MsgRefToMessage(ref slack.ItemRef, api slack.Client) (slack.Message, error) {
+func MsgRefToMessage(ref slack.ItemRef, api slackclient.Client) (slack.Message, error) {
 	message := &slack.Message{}
 	_, _, _, err := api.JoinConversation(ref.Channel)
 	if err != nil {
@@ -53,7 +54,7 @@ func MsgRefToMessage(ref slack.ItemRef, api slack.Client) (slack.Message, error)
 	return *message, nil
 }
 
-func ThreadedReplyToMsg(msg slack.Message, reply string, api slack.Client) (string, string, error) {
+func ThreadedReplyToMsg(msg slack.Message, reply string, api slackclient.Client) (string, string, error) {
 	// Use the correct timestamp for starting or posting to a
 	// thread. Otherwise the bot _could_ modify the message
 	// which causes it to show up in the top-level conversation.
