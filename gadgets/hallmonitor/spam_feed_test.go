@@ -593,7 +593,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 		// No API methods should be called
 		mock := &slackclient.MockClient{}
 		ev := slackevents.MessageEvent{SubType: "file_share", Username: "SomeBot"}
-		processSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
 		// Pass: no panics (no API calls made)
 	})
 
@@ -609,7 +609,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			},
 		}
 		ev := slackevents.MessageEvent{SubType: BOT_MESSAGE_TYPE, Channel: spamChan}
-		processSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
 		// Pass: early return after GetConversationInfo, no further calls
 	})
 
@@ -628,7 +628,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			TimeStamp: spamTS,
 		}
 		// Should not panic; logs error and returns
-		processSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
 	})
 
 	t.Run("opMsg retrieval failure posts error reply and continues", func(t *testing.T) {
@@ -662,7 +662,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			Channel:   spamChan,
 			TimeStamp: spamTS,
 		}
-		processSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
 		// PostMessage should be called at least once (error reply + ack)
 		if postCalled == 0 {
 			t.Errorf("expected PostMessage to be called, got 0 calls")
@@ -688,7 +688,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			Channel:   spamChan,
 			TimeStamp: spamTS,
 		}
-		processSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, threadedPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, threadedPermalink)
 		if !postCalled {
 			t.Errorf("expected PostMessage to be called for threaded reply notice")
 		}
@@ -714,7 +714,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			Channel:   spamChan,
 			TimeStamp: spamTS,
 		}
-		processSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
 		// Expect at least 2 PostMessage calls: ack + "Hey! That's not nice."
 		if postMessages < 2 {
 			t.Errorf("expected at least 2 PostMessage calls (ack + hey), got %d", postMessages)
@@ -760,7 +760,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			Channel:   spamChan,
 			TimeStamp: spamTS,
 		}
-		processSpamFeedMessage(baseRouter, baseRoute, mock, userMock, ev, opPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, userMock, ev, opPermalink)
 
 		if deleteCalled {
 			t.Errorf("expected DeleteMessage NOT to be called when score below threshold")
@@ -812,7 +812,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			Channel:   spamChan,
 			TimeStamp: spamTS,
 		}
-		processSpamFeedMessage(baseRouter, baseRoute, mock, userMock, ev, opPermalink)
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, userMock, ev, opPermalink)
 
 		if !deleteCalled {
 			t.Errorf("expected DeleteMessage to be called when score >= threshold")
@@ -850,7 +850,7 @@ func TestReacjiUsernameTriggersHandler(t *testing.T) {
 		Username: REACJI_USERNAME,
 		Channel:  "C_ANY",
 	}
-	processSpamFeedMessage(router.Router{}, router.Route{}, mock, mock, ev, "")
+	ProcessSpamFeedMessage(router.Router{}, router.Route{}, mock, mock, ev, "")
 	if !called {
 		t.Errorf("expected GetConversationInfo to be called when Username == REACJI_USERNAME")
 	}

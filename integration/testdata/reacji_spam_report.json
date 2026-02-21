@@ -1,0 +1,25 @@
+{
+  "token": "XXYYZZ",
+  "team_id": "T1234",
+  "api_app_id": "A1234",
+  "event": {
+    "type": "message",
+    "subtype": "bot_message",
+    "text": "<https://orgname.slack.com/archives/C_OP_CHAN/p1639843883000100>",
+    "username": "Reacji Channeler",
+    "channel": "C_SPAM_FEED",
+    "ts": "1111111111.000100"
+  },
+  "type": "event_callback",
+  "event_id": "Ev1234",
+  "event_time": 1639843900,
+  "authorizations": [
+    {
+      "enterprise_id": "E1234",
+      "team_id": "T1234",
+      "user_id": "U_BOT",
+      "is_bot": true,
+      "is_enterprise_install": false
+    }
+  ]
+}
