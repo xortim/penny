@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"fmt"
+
 	gadget "github.com/gadget-bot/gadget/core"
 	"github.com/gadget-bot/gadget/router"
+	"github.com/slack-go/slack"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -41,7 +44,48 @@ func server(cmd *cobra.Command, args []string) error {
 	myBot.Router.ChannelMessageRoutes = make(map[string]router.ChannelMessageRoute)
 	myBot.Router.AddChannelMessageRoutes(hallmonitor.GetChannelMessageRoutes())
 
+	if err := joinSpamFeedChannel(myBot.Client); err != nil {
+		return fmt.Errorf("failed to join spam-feed channel: %w", err)
+	}
+
 	return myBot.Run()
+}
+
+// joinSpamFeedChannel finds the configured spam-feed channel by name and joins it.
+func joinSpamFeedChannel(api *slack.Client) error {
+	channelName := viper.GetString("spam_feed.channel")
+	if channelName == "" {
+		return nil
+	}
+
+	cursor := ""
+	for {
+		params := &slack.GetConversationsParameters{
+			ExcludeArchived: true,
+			Limit:           200,
+			Types:           []string{"public_channel", "private_channel"},
+			Cursor:          cursor,
+		}
+		channels, nextCursor, err := api.GetConversations(params)
+		if err != nil {
+			return fmt.Errorf("listing conversations: %w", err)
+		}
+		for _, ch := range channels {
+			if ch.NameNormalized == channelName {
+				_, _, _, err := api.JoinConversation(ch.ID)
+				if err != nil {
+					return fmt.Errorf("joining channel %s: %w", channelName, err)
+				}
+				return nil
+			}
+		}
+		if nextCursor == "" {
+			break
+		}
+		cursor = nextCursor
+	}
+
+	return fmt.Errorf("channel %q not found", channelName)
 }
 
 func setupServerFlags(c *cobra.Command) {
