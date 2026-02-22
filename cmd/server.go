@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xortim/penny/conf"
 	"github.com/xortim/penny/gadgets/hallmonitor"
+	"github.com/xortim/penny/pkg/slackclient"
 )
 
 func newServerCmd() *cobra.Command {
@@ -52,7 +53,7 @@ func server(cmd *cobra.Command, args []string) error {
 }
 
 // joinSpamFeedChannel finds the configured spam-feed channel by name and joins it.
-func joinSpamFeedChannel(api *slack.Client) error {
+func joinSpamFeedChannel(api slackclient.Client) error {
 	channelName := viper.GetString("spam_feed.channel")
 	if channelName == "" {
 		return nil

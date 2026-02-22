@@ -13,4 +13,5 @@ type Client interface {
 	GetUserInfo(user string) (*slack.User, error)
 	SearchMessages(query string, params slack.SearchParameters) (*slack.SearchMessages, error)
 	DeleteMessage(channel, messageTimestamp string) (string, string, error)
+	GetConversations(params *slack.GetConversationsParameters) ([]slack.Channel, string, error)
 }
