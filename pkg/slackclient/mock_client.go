@@ -13,6 +13,7 @@ type MockClient struct {
 	GetUserInfoFn            func(user string) (*slack.User, error)
 	SearchMessagesFn         func(query string, params slack.SearchParameters) (*slack.SearchMessages, error)
 	DeleteMessageFn          func(channel, messageTimestamp string) (string, string, error)
+	GetConversationsFn       func(params *slack.GetConversationsParameters) ([]slack.Channel, string, error)
 }
 
 func (m *MockClient) GetConversationInfo(channel string, includeLocale bool) (*slack.Channel, error) {
@@ -45,4 +46,8 @@ func (m *MockClient) SearchMessages(query string, params slack.SearchParameters)
 
 func (m *MockClient) DeleteMessage(channel, messageTimestamp string) (string, string, error) {
 	return m.DeleteMessageFn(channel, messageTimestamp)
+}
+
+func (m *MockClient) GetConversations(params *slack.GetConversationsParameters) ([]slack.Channel, string, error) {
+	return m.GetConversationsFn(params)
 }
