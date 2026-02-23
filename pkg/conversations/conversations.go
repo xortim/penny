@@ -17,6 +17,36 @@ func ThreadedReplyToMsgRef(ref slack.ItemRef, reply string, api slackclient.Clie
 	return ThreadedReplyToMsg(message, reply, api)
 }
 
+// ThreadReplyToMessage retrieves a specific threaded reply from a conversation.
+func ThreadReplyToMessage(channelID, threadTS, replyTS string, api slackclient.Client) (slack.Message, error) {
+	message := &slack.Message{}
+	_, _, _, err := api.JoinConversation(channelID)
+	if err != nil {
+		return *message, err
+	}
+
+	msgs, _, _, err := api.GetConversationReplies(&slack.GetConversationRepliesParameters{
+		ChannelID: channelID,
+		Timestamp: threadTS,
+		Oldest:    replyTS,
+		Latest:    replyTS,
+		Limit:     1,
+		Inclusive: true,
+	})
+	if err != nil {
+		return *message, err
+	}
+
+	for _, msg := range msgs {
+		if msg.Timestamp == replyTS {
+			msg.Channel = channelID
+			return msg, nil
+		}
+	}
+
+	return *message, fmt.Errorf("reply not found")
+}
+
 // MsgRefToMessage joins the channel in the message reference and returns the found Message struct
 func MsgRefToMessage(ref slack.ItemRef, api slackclient.Client) (slack.Message, error) {
 	message := &slack.Message{}

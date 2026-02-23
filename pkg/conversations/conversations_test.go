@@ -383,6 +383,88 @@ func TestThreadedReplyToMsg(t *testing.T) {
 	}
 }
 
+func TestThreadReplyToMessage(t *testing.T) {
+	const (
+		channelID = "C123"
+		threadTS  = "1234567890.000100"
+		replyTS   = "1234567891.000200"
+	)
+
+	parentMsg := slack.Message{Msg: slack.Msg{Timestamp: threadTS}}
+	replyMsg := slack.Message{Msg: slack.Msg{Timestamp: replyTS}}
+
+	tests := []struct {
+		name     string
+		mock     *slackclient.MockClient
+		wantErr  string
+		wantTS   string
+		wantChan string
+	}{
+		{
+			name: "JoinConversation error",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: func(channelID string) (*slack.Channel, string, []string, error) {
+					return nil, "", nil, errors.New("join failed")
+				},
+			},
+			wantErr: "join failed",
+		},
+		{
+			name: "GetConversationReplies error",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: noopJoin,
+				GetConversationRepliesFn: func(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+					return nil, false, "", errors.New("replies failed")
+				},
+			},
+			wantErr: "replies failed",
+		},
+		{
+			name: "Reply not found in results",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: noopJoin,
+				GetConversationRepliesFn: func(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+					// API always includes parent; reply is missing
+					return []slack.Message{parentMsg}, false, "", nil
+				},
+			},
+			wantErr: "reply not found",
+		},
+		{
+			name: "Happy path",
+			mock: &slackclient.MockClient{
+				JoinConversationFn: noopJoin,
+				GetConversationRepliesFn: func(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+					return []slack.Message{parentMsg, replyMsg}, false, "", nil
+				},
+			},
+			wantTS:   replyTS,
+			wantChan: channelID,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ThreadReplyToMessage(channelID, threadTS, replyTS, tt.mock)
+			if tt.wantErr != "" {
+				if err == nil || err.Error() != tt.wantErr {
+					t.Errorf("ThreadReplyToMessage() error = %v, wantErr %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ThreadReplyToMessage() unexpected error: %v", err)
+			}
+			if got.Timestamp != tt.wantTS {
+				t.Errorf("ThreadReplyToMessage() Timestamp = %q, want %q", got.Timestamp, tt.wantTS)
+			}
+			if got.Channel != tt.wantChan {
+				t.Errorf("ThreadReplyToMessage() Channel = %q, want %q", got.Channel, tt.wantChan)
+			}
+		})
+	}
+}
+
 func TestThreadedReplyToMsgRef(t *testing.T) {
 	ref := slack.NewRefToMessage("C123", "1234567890.000100")
 

@@ -12,10 +12,11 @@ func TestNewRefToMessageFromPermalink(t *testing.T) {
 		str string
 	}
 	tests := []struct {
-		name  string
-		args  args
-		want  slack.ItemRef
-		want1 bool
+		name       string
+		args       args
+		want       slack.ItemRef
+		wantThread string
+		wantReply  bool
 	}{
 		{
 			name: "Post with no replies",
@@ -24,7 +25,8 @@ func TestNewRefToMessageFromPermalink(t *testing.T) {
 				Channel:   "C02BZ36790B",
 				Timestamp: "1639843883.000100",
 			},
-			want1: false,
+			wantThread: "",
+			wantReply:  false,
 		},
 		{
 			name: "Post with replies",
@@ -33,7 +35,8 @@ func TestNewRefToMessageFromPermalink(t *testing.T) {
 				Channel:   "C02BZ36790B",
 				Timestamp: "1639844350.001200",
 			},
-			want1: false,
+			wantThread: "",
+			wantReply:  false,
 		},
 		{
 			name: "Reply to post",
@@ -42,17 +45,21 @@ func TestNewRefToMessageFromPermalink(t *testing.T) {
 				Channel:   "C02BZ36790B",
 				Timestamp: "1639843883.000800",
 			},
-			want1: true,
+			wantThread: "1639843880.000700",
+			wantReply:  true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := NewRefToMessageFromPermalink(tt.args.str)
+			got, gotThread, gotReply := NewRefToMessageFromPermalink(tt.args.str)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewRefToMessageFromPermalink() got = %v, want %v", got, tt.want)
+				t.Errorf("NewRefToMessageFromPermalink() ref = %v, want %v", got, tt.want)
 			}
-			if got1 != tt.want1 {
-				t.Errorf("NewRefToMessageFromPermalink() got1 = %v, want %v", got1, tt.want1)
+			if gotThread != tt.wantThread {
+				t.Errorf("NewRefToMessageFromPermalink() threadTS = %q, want %q", gotThread, tt.wantThread)
+			}
+			if gotReply != tt.wantReply {
+				t.Errorf("NewRefToMessageFromPermalink() isReply = %v, want %v", gotReply, tt.wantReply)
 			}
 		})
 	}

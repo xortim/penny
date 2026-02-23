@@ -8,8 +8,8 @@ import (
 	"github.com/slack-go/slack"
 )
 
-// NewRefToMessageFromPermalink converts a permalink to slack.ItemRef and determines if it is a threaded reply or not
-func NewRefToMessageFromPermalink(str string) (slack.ItemRef, bool) {
+// NewRefToMessageFromPermalink converts a permalink to slack.ItemRef, the thread_ts (empty if not a reply), and whether it is a threaded reply.
+func NewRefToMessageFromPermalink(str string) (slack.ItemRef, string, bool) {
 	u, _ := url.Parse(str)
 	pathParts := strings.Split(u.Path, "/")
 	query, _ := url.ParseQuery(u.RawQuery)
@@ -22,8 +22,12 @@ func NewRefToMessageFromPermalink(str string) (slack.ItemRef, bool) {
 		ref.Timestamp = ts
 	}
 
-	isReply := query.Get("thread_ts") != "" && query.Get("thread_ts") != ts
-	return *ref, isReply
+	threadTS := query.Get("thread_ts")
+	isReply := threadTS != "" && threadTS != ts
+	if !isReply {
+		threadTS = ""
+	}
+	return *ref, threadTS, isReply
 }
 
 // PremalinkPathTS expects the string timestamp representation from a permalink.

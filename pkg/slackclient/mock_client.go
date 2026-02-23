@@ -8,6 +8,7 @@ type MockClient struct {
 	GetConversationInfoFn    func(input *slack.GetConversationInfoInput) (*slack.Channel, error)
 	JoinConversationFn       func(channelID string) (*slack.Channel, string, []string, error)
 	GetConversationHistoryFn func(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error)
+	GetConversationRepliesFn func(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error)
 	PostMessageFn            func(channelID string, options ...slack.MsgOption) (string, string, error)
 	AddReactionFn            func(name string, item slack.ItemRef) error
 	GetUserInfoFn            func(user string) (*slack.User, error)
@@ -26,6 +27,10 @@ func (m *MockClient) JoinConversation(channelID string) (*slack.Channel, string,
 
 func (m *MockClient) GetConversationHistory(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
 	return m.GetConversationHistoryFn(params)
+}
+
+func (m *MockClient) GetConversationReplies(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+	return m.GetConversationRepliesFn(params)
 }
 
 func (m *MockClient) PostMessage(channelID string, options ...slack.MsgOption) (string, string, error) {

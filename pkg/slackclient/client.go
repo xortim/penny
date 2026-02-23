@@ -8,6 +8,7 @@ type Client interface {
 	GetConversationInfo(input *slack.GetConversationInfoInput) (*slack.Channel, error)
 	JoinConversation(channelID string) (*slack.Channel, string, []string, error)
 	GetConversationHistory(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error)
+	GetConversationReplies(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error)
 	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
 	AddReaction(name string, item slack.ItemRef) error
 	GetUserInfo(user string) (*slack.User, error)
