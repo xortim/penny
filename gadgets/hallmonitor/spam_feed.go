@@ -71,16 +71,17 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 		return
 	}
 
-	opMsgRef, opThreaded := parsers.NewRefToMessageFromPermalink(strings.Trim(message, "<>"))
-	if opThreaded {
-		_, _, _ = conversations.ThreadedReplyToMsg(spamFeedMsg, "I currently don't handle threaded replies.", api)
-		// TODO: https://api.slack.com/messaging/retrieving#pulling_threads
-		return
-	}
+	opMsgRef, opThreadTS, opThreaded := parsers.NewRefToMessageFromPermalink(strings.Trim(message, "<>"))
 
-	opMsg, err := conversations.MsgRefToMessage(opMsgRef, api)
+	var opMsg slack.Message
+	if opThreaded {
+		opMsg, err = conversations.ThreadReplyToMessage(opMsgRef.Channel, opThreadTS, opMsgRef.Timestamp, api)
+	} else {
+		opMsg, err = conversations.MsgRefToMessage(opMsgRef, api)
+	}
 	if err != nil {
 		_, _, _ = conversations.ThreadedReplyToMsg(spamFeedMsg, "I couldn't retrieve the original message from the Slack API.", api)
+		return
 	}
 
 	reporters := conversations.WhoReactedWithAsMention(opMsg, viper.GetString("spam_feed.emoji"))
@@ -107,10 +108,7 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 	}
 
 	removed := false
-	score, reasons, err := anomalyScoreInternal(opMsgRef, api, userApi, logger)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to calculate anomaly score")
-	}
+	score, reasons := anomalyScoreInternal(opMsg, api, userApi, logger)
 
 	if score >= viper.GetInt("spam_feed.max_anomaly_score") {
 		logger.Info().Int("score", score).Int("threshold", viper.GetInt("spam_feed.max_anomaly_score")).Msg("message removed")
@@ -145,22 +143,22 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 }
 
 // AnomalyScore returns the calculated anomaly score for the provided ItemRef.
-// It is a thin wrapper that creates the user-token client and delegates to anomalyScoreInternal.
+// It is a thin wrapper that creates the user-token client, fetches the message, and delegates to anomalyScoreInternal.
 func AnomalyScore(ref slack.ItemRef, api slack.Client) (int, []string, error) {
 	userApi := slack.New(viper.GetString("slack.user_oauth_token"))
-	return anomalyScoreInternal(ref, &api, userApi, log.Logger)
+	opMsg, err := conversations.MsgRefToMessage(ref, &api)
+	if err != nil {
+		return 0, nil, err
+	}
+	score, reasons := anomalyScoreInternal(opMsg, &api, userApi, log.Logger)
+	return score, reasons, nil
 }
 
-func anomalyScoreInternal(ref slack.ItemRef, api slackclient.Client, userApi slackclient.Client, logger zerolog.Logger) (int, []string, error) {
+func anomalyScoreInternal(opMsg slack.Message, api slackclient.Client, userApi slackclient.Client, logger zerolog.Logger) (int, []string) {
 	reasons := make([]string, 0)
 	score := viper.GetInt("spam_feed.anomaly_scores.reported")
 	if score != 0 {
 		reasons = append(reasons, fmt.Sprintf("reported by the community as being spammy: %d", viper.GetInt("spam_feed.anomaly_scores.reported")))
-	}
-
-	opMsg, err := conversations.MsgRefToMessage(ref, api)
-	if err != nil {
-		return score, reasons, err
 	}
 
 	activityScore, err := userActivityScore(opMsg.User, userApi)
@@ -184,7 +182,7 @@ func anomalyScoreInternal(ref slack.ItemRef, api slackclient.Client, userApi sla
 	}
 
 	logger.Info().Int("anomaly_score", score).Int("reasons", len(reasons)).Msg("anomaly score calculated")
-	return score, reasons, nil
+	return score, reasons
 }
 
 // userActivityScore performs a public activity search for the specified user and returns
