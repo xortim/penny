@@ -65,6 +65,19 @@ tools: ## Install tools needed for development
 	@go get -u golang.org/x/lint/golint
 
 ###############
+##@ Release
+
+.PHONY: snapshot
+snapshot: ## Build a snapshot release locally (no publish)
+	@$(MAKE) --no-print-directory log-$@
+	goreleaser release --snapshot --clean
+
+.PHONY: release
+release: ## Create a release with goreleaser
+	@$(MAKE) --no-print-directory log-$@
+	goreleaser release --clean
+
+###############
 ##@ Database
 .PHONY: start-db
 start-db: ## Start maria db - export DB_ROOT_PASS and DB_PASS to set credentials
