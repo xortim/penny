@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "(Write|Edit)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "go build ./... 2>&1 | head -20"
+          }
+        ]
+      }
+    ]
+  }
+}

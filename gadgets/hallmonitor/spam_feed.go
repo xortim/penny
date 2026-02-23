@@ -2,10 +2,10 @@ package hallmonitor
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/gadget-bot/gadget/router"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -46,26 +46,28 @@ func handleSpamFeedMessage(r router.Router, route router.Route, api slack.Client
 // ProcessSpamFeedMessage contains the testable core logic extracted from handleSpamFeedMessage.
 // Exported so that integration tests can inject both API clients.
 func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient.Client, userApi slackclient.Client, ev slackevents.MessageEvent, message string) {
+	logger := log.With().Str("channel_id", ev.Channel).Str("event_ts", ev.TimeStamp).Logger()
+
 	// only look at the original, unfurled message
 	if ev.SubType != BOT_MESSAGE_TYPE && ev.Username != REACJI_USERNAME {
 		return
 	}
 
 	// only look at messages in the correct channel.
-	channelInfo, err := api.GetConversationInfo(ev.Channel, false)
+	channelInfo, err := api.GetConversationInfo(&slack.GetConversationInfoInput{ChannelID: ev.Channel})
 	if err != nil {
-		print("there was error when getting the conversation information: ")
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to get conversation info")
 	}
 	if channelInfo.NameNormalized != viper.GetString("spam_feed.channel") {
 		return
 	}
 
+	logger.Info().Msg("processing spam feed message")
+
 	spamFeedMsgRef := slack.NewRefToMessage(ev.Channel, ev.TimeStamp)
 	spamFeedMsg, err := conversations.MsgRefToMessage(spamFeedMsgRef, api)
 	if err != nil {
-		print("could not get a message object from the spam-feed message reference: ")
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to resolve spam-feed message reference")
 		return
 	}
 
@@ -93,57 +95,52 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 	}
 	_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, ack, api)
 	if err != nil {
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to send acknowledgment reply")
 	}
 
 	if opMsg.User == r.BotUID {
 		_, _, err = conversations.ThreadedReplyToMsg(spamFeedMsg, "Hey! That's not nice.", api)
 		if err != nil {
-			print("could not reply to spam feed message: ")
-			println(err.Error())
+			logger.Error().Err(err).Msg("failed to reply to spam feed message")
 		}
 		return
 	}
 
 	removed := false
-	score, reasons, err := anomalyScoreInternal(opMsgRef, api, userApi)
+	score, reasons, err := anomalyScoreInternal(opMsgRef, api, userApi, logger)
 	if err != nil {
-		print("there was an error when calculating the anomaly score: ")
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to calculate anomaly score")
 	}
 
 	if score >= viper.GetInt("spam_feed.max_anomaly_score") {
+		logger.Info().Int("score", score).Int("threshold", viper.GetInt("spam_feed.max_anomaly_score")).Msg("message removed")
 		_, _, err = conversations.ThreadedReplyToMsg(opMsg, removalReply(), api)
 		if err != nil {
-			print("there was an error when replying to OP message: ")
-			println(err.Error())
+			logger.Error().Err(err).Msg("failed to warn OP before removal")
 		}
 		_, _, err = userApi.DeleteMessage(opMsg.Channel, opMsg.Timestamp)
 		if err != nil {
-			print("could not delete message " + opMsg.Channel + "/" + opMsg.Timestamp + ": ")
-			println(err.Error())
+			logger.Error().Err(err).Str("op_channel", opMsg.Channel).Str("op_ts", opMsg.Timestamp).Msg("failed to delete message")
 		}
 		removed = true
 	} else {
+		logger.Info().Int("score", score).Int("threshold", viper.GetInt("spam_feed.max_anomaly_score")).Msg("below threshold")
 		if len(viper.GetString("spam_feed.op_warning")) != 0 {
 			_, _, err = conversations.ThreadedReplyToMsg(opMsg, viper.GetString("spam_feed.op_warning"), api)
 			if err != nil {
-				print("there was an error when replying to OP message: ")
-				println(err.Error())
+				logger.Error().Err(err).Msg("failed to warn OP")
 			}
 		}
 	}
 
 	err = addAnomalyReaction(removed, spamFeedMsgRef, api)
 	if err != nil {
-		print("there wasn error when adding the anomaly reaction: ")
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to add anomaly reaction")
 	}
 
 	err = addDebugResponse(removed, score, reasons, spamFeedMsg, api)
 	if err != nil {
-		print("there was an error when replying to the spam-feed message: ")
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to post debug response")
 	}
 }
 
@@ -151,10 +148,10 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 // It is a thin wrapper that creates the user-token client and delegates to anomalyScoreInternal.
 func AnomalyScore(ref slack.ItemRef, api slack.Client) (int, []string, error) {
 	userApi := slack.New(viper.GetString("slack.user_oauth_token"))
-	return anomalyScoreInternal(ref, &api, userApi)
+	return anomalyScoreInternal(ref, &api, userApi, log.Logger)
 }
 
-func anomalyScoreInternal(ref slack.ItemRef, api slackclient.Client, userApi slackclient.Client) (int, []string, error) {
+func anomalyScoreInternal(ref slack.ItemRef, api slackclient.Client, userApi slackclient.Client, logger zerolog.Logger) (int, []string, error) {
 	reasons := make([]string, 0)
 	score := viper.GetInt("spam_feed.anomaly_scores.reported")
 	if score != 0 {
@@ -168,25 +165,25 @@ func anomalyScoreInternal(ref slack.ItemRef, api slackclient.Client, userApi sla
 
 	activityScore, err := userActivityScore(opMsg.User, userApi)
 	if err != nil {
-		print("an error occured when retriving the user activity: ")
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to retrieve user activity")
 	}
 	if activityScore != 0 {
 		score += activityScore
 		reasons = append(reasons, fmt.Sprintf("below the public activity low watermark: %d", activityScore))
-		log.Debug().Str("anomaly_score", strconv.Itoa(score))
+		logger.Debug().Int("anomaly_score", score).Msg("added activity score")
 	}
 
 	tzScore, err := userTzScore(opMsg.User, api)
 	if err != nil {
-		println(err.Error())
+		logger.Error().Err(err).Msg("failed to check user timezone")
 	}
 	if tzScore != 0 {
 		score += tzScore
 		reasons = append(reasons, fmt.Sprintf("outside of the community timezone: %d", tzScore))
-		log.Debug().Str("anomaly_score", strconv.Itoa(score))
+		logger.Debug().Int("anomaly_score", score).Msg("added timezone score")
 	}
 
+	logger.Info().Int("anomaly_score", score).Int("reasons", len(reasons)).Msg("anomaly score calculated")
 	return score, reasons, nil
 }
 

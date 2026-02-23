@@ -6,6 +6,7 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/xortim/penny/conf"
@@ -33,14 +34,16 @@ func Execute() {
 	addSubcommands(rootCmd)
 
 	if err := rootCmd.Execute(); err != nil {
-		println(err.Error())
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("command failed")
 	}
 }
 
 func setupFlags(c *cobra.Command) {
 	c.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default \"$HOME/."+conf.Executable+".yaml\")")
 	c.MarkPersistentFlagFilename("config")
+
+	c.PersistentFlags().String("log_level", "info", "Log level (trace, debug, info, warn, error, fatal)")
+	viper.BindPFlag("log.level", c.PersistentFlags().Lookup("log_level"))
 
 	c.PersistentFlags().StringSlice("global_admins", []string{}, "A string list of global admin UUIDs.")
 	viper.BindPFlag("slack.global_admins", c.PersistentFlags().Lookup("global_admins"))
@@ -103,13 +106,16 @@ func addSubcommands(c *cobra.Command) {
 }
 
 func initConfig() {
+	// Set up console logger early so config-loading messages are formatted.
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+		With().Timestamp().Logger()
+
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		home, err := homedir.Dir()
 		if err != nil {
-			println(err)
-			os.Exit(1)
+			log.Fatal().Err(err).Msg("failed to determine home directory")
 		}
 
 		viper.AddConfigPath(home)
@@ -122,9 +128,12 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		println("Using config file: ", viper.ConfigFileUsed())
+		log.Info().Str("config", viper.ConfigFileUsed()).Msg("loaded config file")
 	}
 
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	level, err := zerolog.ParseLevel(viper.GetString("log.level"))
+	if err != nil {
+		level = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(level)
 }
