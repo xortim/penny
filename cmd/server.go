@@ -5,6 +5,7 @@ import (
 
 	gadget "github.com/gadget-bot/gadget/core"
 	"github.com/gadget-bot/gadget/router"
+	"github.com/rs/zerolog/log"
 	"github.com/slack-go/slack"
 
 	"github.com/spf13/cobra"
@@ -49,6 +50,12 @@ func server(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to join spam-feed channel: %w", err)
 	}
 
+	log.Info().
+		Str("version", conf.GitVersion).
+		Int("port", viper.GetInt("server.port")).
+		Str("spam_feed_channel", viper.GetString("spam_feed.channel")).
+		Msg("starting penny")
+
 	return myBot.Run()
 }
 
@@ -56,9 +63,11 @@ func server(cmd *cobra.Command, args []string) error {
 func joinSpamFeedChannel(api slackclient.Client) error {
 	channelName := viper.GetString("spam_feed.channel")
 	if channelName == "" {
+		log.Debug().Msg("no spam-feed channel configured, skipping auto-join")
 		return nil
 	}
 
+	log.Debug().Str("channel", channelName).Msg("searching for spam-feed channel")
 	cursor := ""
 	for {
 		params := &slack.GetConversationsParameters{
@@ -77,6 +86,7 @@ func joinSpamFeedChannel(api slackclient.Client) error {
 				if err != nil {
 					return fmt.Errorf("joining channel %s: %w", channelName, err)
 				}
+				log.Info().Str("channel", channelName).Str("channel_id", ch.ID).Msg("joined spam-feed channel")
 				return nil
 			}
 		}

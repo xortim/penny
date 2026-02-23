@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gadget-bot/gadget/router"
+	"github.com/rs/zerolog"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
 	"github.com/spf13/viper"
@@ -521,7 +522,7 @@ func TestAnomalyScoreInternal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setupViperConfig(t, tt.config)
 
-			score, reasons, err := anomalyScoreInternal(ref, tt.api, tt.userApi)
+			score, reasons, err := anomalyScoreInternal(ref, tt.api, tt.userApi, zerolog.Nop())
 			if tt.wantErr && err == nil {
 				t.Errorf("anomalyScoreInternal() expected error, got nil")
 			}
