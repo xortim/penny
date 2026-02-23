@@ -1,0 +1,34 @@
+version: 2
+
+project_name: penny
+
+builds:
+  - main: .
+    binary: "{{ .Os }}-{{ .Arch }}/penny"
+    no_unique_dist_dir: true
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/xortim/penny/conf.GitVersion={{.Version}}
+    hooks:
+      post:
+        - cmd: ln -sf {{ .Os }}-{{ .Arch }}/penny dist/penny
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
