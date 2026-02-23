@@ -579,7 +579,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 	baseRoute := router.Route{}
 
 	// channelInfoOK returns the spam-feed channel info.
-	channelInfoOK := func(channel string, includeLocale bool) (*slack.Channel, error) {
+	channelInfoOK := func(input *slack.GetConversationInfoInput) (*slack.Channel, error) {
 		return &slack.Channel{
 			GroupConversation: slack.GroupConversation{
 				Conversation: slack.Conversation{NameNormalized: chanName},
@@ -600,7 +600,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 	t.Run("Early return when channel name does not match", func(t *testing.T) {
 		setupViperConfig(t, baseConfig)
 		mock := &slackclient.MockClient{
-			GetConversationInfoFn: func(channel string, includeLocale bool) (*slack.Channel, error) {
+			GetConversationInfoFn: func(input *slack.GetConversationInfoInput) (*slack.Channel, error) {
 				return &slack.Channel{
 					GroupConversation: slack.GroupConversation{
 						Conversation: slack.Conversation{NameNormalized: "other-channel"},
@@ -837,7 +837,7 @@ func TestReacjiUsernameTriggersHandler(t *testing.T) {
 
 	called := false
 	mock := &slackclient.MockClient{
-		GetConversationInfoFn: func(channel string, includeLocale bool) (*slack.Channel, error) {
+		GetConversationInfoFn: func(input *slack.GetConversationInfoInput) (*slack.Channel, error) {
 			called = true
 			return &slack.Channel{
 				GroupConversation: slack.GroupConversation{

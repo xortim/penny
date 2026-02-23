@@ -5,7 +5,7 @@ import "github.com/slack-go/slack"
 // Client is an interface over the Slack API methods used by penny.
 // *slack.Client satisfies this interface at compile time.
 type Client interface {
-	GetConversationInfo(channel string, includeLocale bool) (*slack.Channel, error)
+	GetConversationInfo(input *slack.GetConversationInfoInput) (*slack.Channel, error)
 	JoinConversation(channelID string) (*slack.Channel, string, []string, error)
 	GetConversationHistory(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error)
 	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)

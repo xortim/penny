@@ -52,7 +52,7 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 	}
 
 	// only look at messages in the correct channel.
-	channelInfo, err := api.GetConversationInfo(ev.Channel, false)
+	channelInfo, err := api.GetConversationInfo(&slack.GetConversationInfoInput{ChannelID: ev.Channel})
 	if err != nil {
 		print("there was error when getting the conversation information: ")
 		println(err.Error())

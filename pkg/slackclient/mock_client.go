@@ -5,7 +5,7 @@ import "github.com/slack-go/slack"
 // MockClient is a configurable mock of Client for use in tests.
 // Set only the Fn fields you need; unconfigured methods panic to signal unexpected calls.
 type MockClient struct {
-	GetConversationInfoFn    func(channel string, includeLocale bool) (*slack.Channel, error)
+	GetConversationInfoFn    func(input *slack.GetConversationInfoInput) (*slack.Channel, error)
 	JoinConversationFn       func(channelID string) (*slack.Channel, string, []string, error)
 	GetConversationHistoryFn func(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error)
 	PostMessageFn            func(channelID string, options ...slack.MsgOption) (string, string, error)
@@ -16,8 +16,8 @@ type MockClient struct {
 	GetConversationsFn       func(params *slack.GetConversationsParameters) ([]slack.Channel, string, error)
 }
 
-func (m *MockClient) GetConversationInfo(channel string, includeLocale bool) (*slack.Channel, error) {
-	return m.GetConversationInfoFn(channel, includeLocale)
+func (m *MockClient) GetConversationInfo(input *slack.GetConversationInfoInput) (*slack.Channel, error) {
+	return m.GetConversationInfoFn(input)
 }
 
 func (m *MockClient) JoinConversation(channelID string) (*slack.Channel, string, []string, error) {
