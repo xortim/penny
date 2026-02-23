@@ -379,17 +379,10 @@ func TestAnomalyScoreInternal(t *testing.T) {
 	opMsg := slack.Message{
 		Msg: slack.Msg{Timestamp: opTS, Channel: opChan, User: opUser},
 	}
-	ref := slack.NewRefToMessage(opChan, opTS)
 
-	// apiMock builds a mock that returns opMsg on history lookup and optionally GetUserInfo.
+	// apiMock builds a mock with GetUserInfo configured.
 	apiMock := func(userTZ string, getUserErr error) *slackclient.MockClient {
 		return &slackclient.MockClient{
-			JoinConversationFn: noopJoin,
-			GetConversationHistoryFn: func(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
-				return &slack.GetConversationHistoryResponse{
-					Messages: []slack.Message{opMsg},
-				}, nil
-			},
 			GetUserInfoFn: func(user string) (*slack.User, error) {
 				if getUserErr != nil {
 					return nil, getUserErr
@@ -420,7 +413,6 @@ func TestAnomalyScoreInternal(t *testing.T) {
 		userApi     *slackclient.MockClient
 		wantScore   int
 		wantReasons int
-		wantErr     bool
 	}{
 		{
 			name: "Base score only (watermark disabled, no tz configured)",
@@ -475,22 +467,6 @@ func TestAnomalyScoreInternal(t *testing.T) {
 			wantReasons: 3,
 		},
 		{
-			name: "MsgRefToMessage failure returns base score and error",
-			config: map[string]interface{}{
-				"spam_feed.anomaly_scores.reported": 2,
-				"spam_feed.activity_low_watermark":  0,
-			},
-			api: &slackclient.MockClient{
-				JoinConversationFn: func(channelID string) (*slack.Channel, string, []string, error) {
-					return nil, "", nil, errors.New("join error")
-				},
-			},
-			userApi:     &slackclient.MockClient{},
-			wantScore:   2,
-			wantReasons: 1,
-			wantErr:     true,
-		},
-		{
 			name: "userActivityScore error is logged but execution continues",
 			config: map[string]interface{}{
 				"spam_feed.anomaly_scores.reported":     2,
@@ -522,13 +498,7 @@ func TestAnomalyScoreInternal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setupViperConfig(t, tt.config)
 
-			score, reasons, err := anomalyScoreInternal(ref, tt.api, tt.userApi, zerolog.Nop())
-			if tt.wantErr && err == nil {
-				t.Errorf("anomalyScoreInternal() expected error, got nil")
-			}
-			if !tt.wantErr && err != nil {
-				t.Errorf("anomalyScoreInternal() unexpected error: %v", err)
-			}
+			score, reasons := anomalyScoreInternal(opMsg, tt.api, tt.userApi, zerolog.Nop())
 			if score != tt.wantScore {
 				t.Errorf("anomalyScoreInternal() score = %d, want %d", score, tt.wantScore)
 			}
@@ -632,7 +602,7 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
 	})
 
-	t.Run("opMsg retrieval failure posts error reply and continues", func(t *testing.T) {
+	t.Run("opMsg retrieval failure posts error reply and returns early", func(t *testing.T) {
 		setupViperConfig(t, map[string]interface{}{
 			"spam_feed.channel":                 chanName,
 			"spam_feed.anomaly_scores.reported": 2,
@@ -642,6 +612,8 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			"spam_feed.reaction_emoji_miss":     "white_check_mark",
 		})
 		postCalled := 0
+		deleteCalled := false
+		reactionCalled := false
 		mock := &slackclient.MockClient{
 			GetConversationInfoFn: channelInfoOK,
 			JoinConversationFn:    noopJoin,
@@ -656,7 +628,14 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 				postCalled++
 				return channelID, "ts", nil
 			},
-			AddReactionFn: noopReaction,
+			AddReactionFn: func(name string, item slack.ItemRef) error {
+				reactionCalled = true
+				return nil
+			},
+			DeleteMessageFn: func(channel, messageTimestamp string) (string, string, error) {
+				deleteCalled = true
+				return channel, messageTimestamp, nil
+			},
 		}
 		ev := slackevents.MessageEvent{
 			SubType:   BOT_MESSAGE_TYPE,
@@ -664,24 +643,49 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			TimeStamp: spamTS,
 		}
 		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, opPermalink)
-		// PostMessage should be called at least once (error reply + ack)
 		if postCalled == 0 {
-			t.Errorf("expected PostMessage to be called, got 0 calls")
+			t.Errorf("expected PostMessage to be called for error reply, got 0 calls")
+		}
+		if deleteCalled {
+			t.Errorf("expected DeleteMessage NOT to be called after retrieval failure")
+		}
+		if reactionCalled {
+			t.Errorf("expected AddReaction NOT to be called after retrieval failure")
 		}
 	})
 
-	t.Run("Threaded reply triggers early return with reply message", func(t *testing.T) {
-		setupViperConfig(t, baseConfig)
-		postCalled := false
+	t.Run("Threaded reply retrieval failure posts error reply and returns early", func(t *testing.T) {
+		setupViperConfig(t, map[string]interface{}{
+			"spam_feed.channel":                 chanName,
+			"spam_feed.anomaly_scores.reported": 2,
+			"spam_feed.activity_low_watermark":  0,
+			"spam_feed.local_timezone":          "",
+			"spam_feed.max_anomaly_score":       5,
+			"spam_feed.reaction_emoji_miss":     "white_check_mark",
+		})
+		postCalled := 0
+		deleteCalled := false
+		reactionCalled := false
 		mock := &slackclient.MockClient{
 			GetConversationInfoFn: channelInfoOK,
 			JoinConversationFn:    noopJoin,
 			GetConversationHistoryFn: historyFor(map[string]slack.Message{
 				spamChan: spamFeedMsg,
 			}),
+			GetConversationRepliesFn: func(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+				return nil, false, "", errors.New("replies failed")
+			},
 			PostMessageFn: func(channelID string, options ...slack.MsgOption) (string, string, error) {
-				postCalled = true
+				postCalled++
 				return channelID, "ts", nil
+			},
+			AddReactionFn: func(name string, item slack.ItemRef) error {
+				reactionCalled = true
+				return nil
+			},
+			DeleteMessageFn: func(channel, messageTimestamp string) (string, string, error) {
+				deleteCalled = true
+				return channel, messageTimestamp, nil
 			},
 		}
 		ev := slackevents.MessageEvent{
@@ -690,8 +694,132 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 			TimeStamp: spamTS,
 		}
 		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, mock, ev, threadedPermalink)
-		if !postCalled {
-			t.Errorf("expected PostMessage to be called for threaded reply notice")
+		if postCalled == 0 {
+			t.Errorf("expected PostMessage to be called for threaded reply error")
+		}
+		if deleteCalled {
+			t.Errorf("expected DeleteMessage NOT to be called after threaded retrieval failure")
+		}
+		if reactionCalled {
+			t.Errorf("expected AddReaction NOT to be called after threaded retrieval failure")
+		}
+	})
+
+	t.Run("Threaded reply below threshold: no DeleteMessage, warning posted", func(t *testing.T) {
+		cfg := map[string]interface{}{
+			"spam_feed.channel":                 chanName,
+			"spam_feed.anomaly_scores.reported": 2,
+			"spam_feed.activity_low_watermark":  0,
+			"spam_feed.local_timezone":          "",
+			"spam_feed.max_anomaly_score":       5, // score 2 < 5
+			"spam_feed.reaction_emoji_miss":     "white_check_mark",
+			"spam_feed.op_warning":              "This message has been flagged.",
+		}
+		setupViperConfig(t, cfg)
+
+		threadedOpMsg := slack.Message{
+			Msg: slack.Msg{Timestamp: "1639843883.000800", Channel: opChan, User: opUser},
+		}
+		threadParentMsg := slack.Message{
+			Msg: slack.Msg{Timestamp: "1639843880.000700", Channel: opChan},
+		}
+		deleteCalled := false
+		reactionEmoji := ""
+		mock := &slackclient.MockClient{
+			GetConversationInfoFn: channelInfoOK,
+			JoinConversationFn:    noopJoin,
+			GetConversationHistoryFn: historyFor(map[string]slack.Message{
+				spamChan: spamFeedMsg,
+			}),
+			GetConversationRepliesFn: func(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+				return []slack.Message{threadParentMsg, threadedOpMsg}, false, "", nil
+			},
+			PostMessageFn: noopPost,
+			AddReactionFn: func(name string, item slack.ItemRef) error {
+				reactionEmoji = name
+				return nil
+			},
+		}
+		userMock := &slackclient.MockClient{
+			DeleteMessageFn: func(channel, messageTimestamp string) (string, string, error) {
+				deleteCalled = true
+				return channel, messageTimestamp, nil
+			},
+		}
+
+		ev := slackevents.MessageEvent{
+			SubType:   BOT_MESSAGE_TYPE,
+			Channel:   spamChan,
+			TimeStamp: spamTS,
+		}
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, userMock, ev, threadedPermalink)
+
+		if deleteCalled {
+			t.Errorf("expected DeleteMessage NOT to be called when score below threshold")
+		}
+		if reactionEmoji != "white_check_mark" {
+			t.Errorf("expected miss emoji 'white_check_mark', got %q", reactionEmoji)
+		}
+	})
+
+	t.Run("Threaded reply at threshold: DeleteMessage called", func(t *testing.T) {
+		cfg := map[string]interface{}{
+			"spam_feed.channel":                 chanName,
+			"spam_feed.anomaly_scores.reported": 5,
+			"spam_feed.activity_low_watermark":  0,
+			"spam_feed.local_timezone":          "",
+			"spam_feed.max_anomaly_score":       5, // score 5 >= 5
+			"spam_feed.reaction_emoji_hit":      "no_entry",
+		}
+		setupViperConfig(t, cfg)
+
+		threadedOpMsg := slack.Message{
+			Msg: slack.Msg{Timestamp: "1639843883.000800", Channel: opChan, User: opUser},
+		}
+		threadParentMsg := slack.Message{
+			Msg: slack.Msg{Timestamp: "1639843880.000700", Channel: opChan},
+		}
+		deleteCalled := false
+		deletedChan := ""
+		deletedTS := ""
+		mock := &slackclient.MockClient{
+			GetConversationInfoFn: channelInfoOK,
+			JoinConversationFn:    noopJoin,
+			GetConversationHistoryFn: historyFor(map[string]slack.Message{
+				spamChan: spamFeedMsg,
+			}),
+			GetConversationRepliesFn: func(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+				return []slack.Message{threadParentMsg, threadedOpMsg}, false, "", nil
+			},
+			PostMessageFn: noopPost,
+			AddReactionFn: func(name string, item slack.ItemRef) error {
+				return nil
+			},
+		}
+		userMock := &slackclient.MockClient{
+			DeleteMessageFn: func(channel, messageTimestamp string) (string, string, error) {
+				deleteCalled = true
+				deletedChan = channel
+				deletedTS = messageTimestamp
+				return channel, messageTimestamp, nil
+			},
+		}
+
+		ev := slackevents.MessageEvent{
+			SubType:   BOT_MESSAGE_TYPE,
+			Channel:   spamChan,
+			TimeStamp: spamTS,
+		}
+		ProcessSpamFeedMessage(baseRouter, baseRoute, mock, userMock, ev, threadedPermalink)
+
+		if !deleteCalled {
+			t.Errorf("expected DeleteMessage to be called when score >= threshold")
+		}
+		if deletedChan != opChan {
+			t.Errorf("DeleteMessage called on channel %q, want %q", deletedChan, opChan)
+		}
+		if deletedTS != "1639843883.000800" {
+			t.Errorf("DeleteMessage called with ts %q, want %q", deletedTS, "1639843883.000800")
 		}
 	})
 
