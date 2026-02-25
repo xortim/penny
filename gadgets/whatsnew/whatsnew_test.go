@@ -157,10 +157,7 @@ func TestProcessWhatsNew(t *testing.T) {
 }
 
 func TestGetMentionRoutes(t *testing.T) {
-	SetChangelog(testChangelog)
-	t.Cleanup(func() { changelogRaw = "" })
-
-	routes := GetMentionRoutes()
+	routes := GetMentionRoutes(testChangelog)
 	if len(routes) != 1 {
 		t.Fatalf("GetMentionRoutes() returned %d routes, want 1", len(routes))
 	}

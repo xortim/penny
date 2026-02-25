@@ -26,7 +26,7 @@ var (
 	// Matches [text](url)
 	linkRe = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 	// Matches **bold**
-	boldRe = regexp.MustCompile(`\*\*(.+?)\*\*`)
+	boldRe = regexp.MustCompile(`\*\*([^*]+)\*\*`)
 )
 
 // Parse splits raw Keep a Changelog content into sections.
@@ -77,7 +77,7 @@ func (c Changelog) Since(version string) (string, error) {
 		return "", fmt.Errorf("version %q not found in changelog", version)
 	}
 	if idx == 0 {
-		return "", fmt.Errorf("no entries newer than %q", version)
+		return "You're up to date!", nil
 	}
 
 	var parts []string

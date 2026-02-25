@@ -47,9 +47,8 @@ func server(cmd *cobra.Command, args []string) error {
 	myBot.Router.ChannelMessageRoutes = make(map[string]router.ChannelMessageRoute)
 	myBot.Router.AddChannelMessageRoutes(hallmonitor.GetChannelMessageRoutes())
 
-	whatsnew.SetChangelog(ChangelogRaw)
 	myBot.Router.MentionRoutes = make(map[string]router.MentionRoute)
-	myBot.Router.AddMentionRoutes(whatsnew.GetMentionRoutes())
+	myBot.Router.AddMentionRoutes(whatsnew.GetMentionRoutes(ChangelogRaw))
 
 	if err := joinSpamFeedChannel(myBot.Client); err != nil {
 		return fmt.Errorf("failed to join spam-feed channel: %w", err)

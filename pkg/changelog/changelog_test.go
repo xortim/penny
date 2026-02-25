@@ -141,10 +141,13 @@ func TestSince(t *testing.T) {
 		}
 	})
 
-	t.Run("since latest version returns error", func(t *testing.T) {
-		_, err := cl.Since("Unreleased")
-		if err == nil {
-			t.Error("Since(\"Unreleased\") should return error when nothing is newer")
+	t.Run("since latest version returns up to date message", func(t *testing.T) {
+		got, err := cl.Since("Unreleased")
+		if err != nil {
+			t.Fatalf("Since(\"Unreleased\") unexpected error: %v", err)
+		}
+		if got != "You're up to date!" {
+			t.Errorf("Since(\"Unreleased\") = %q, want %q", got, "You're up to date!")
 		}
 	})
 }

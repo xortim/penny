@@ -12,37 +12,23 @@ import (
 	"github.com/xortim/penny/pkg/slackclient"
 )
 
-var changelogRaw string
-
 var sinceRe = regexp.MustCompile(`(?i)what'?s\s+new\s+since\s+v?(\S+)`)
 
-// SetChangelog stores the raw changelog content for use by the handler.
-func SetChangelog(raw string) {
-	changelogRaw = raw
-}
-
 // GetMentionRoutes returns the mention routes for the whatsnew gadget.
-func GetMentionRoutes() []router.MentionRoute {
+func GetMentionRoutes(raw string) []router.MentionRoute {
 	return []router.MentionRoute{
-		*whatsNewRoute(),
-	}
-}
-
-func whatsNewRoute() *router.MentionRoute {
-	return &router.MentionRoute{
-		Route: router.Route{
-			Name:        "whatsnew.whatsNew",
-			Pattern:     `(?i)what'?s\s+new`,
-			Description: "Show recent changelog entries",
-			Help:        "what's new [since <version>]",
+		{
+			Route: router.Route{
+				Name:        "whatsnew.whatsNew",
+				Pattern:     `(?i)what'?s\s+new`,
+				Description: "Show recent changelog entries",
+				Help:        "what's new [since <version>]",
+			},
+			Plugin: func(r router.Router, route router.Route, api slack.Client, ev slackevents.AppMentionEvent, message string) {
+				processWhatsNew(&api, ev, message, raw)
+			},
 		},
-		Plugin: handleWhatsNew,
 	}
-}
-
-// handleWhatsNew is the Gadget-registered handler. Its signature is fixed by the framework.
-func handleWhatsNew(r router.Router, route router.Route, api slack.Client, ev slackevents.AppMentionEvent, message string) {
-	processWhatsNew(&api, ev, message, changelogRaw)
 }
 
 // processWhatsNew contains the testable core logic.
