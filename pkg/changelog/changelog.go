@@ -91,7 +91,7 @@ func (c Changelog) Since(version string) (string, error) {
 func FormatSection(s Section) string {
 	var header string
 	if s.Version == "Unreleased" {
-		header = "*Unreleased*"
+		header = "*Latest Changes*"
 	} else {
 		if s.Date != "" {
 			header = fmt.Sprintf("*v%s* (%s)", s.Version, s.Date)

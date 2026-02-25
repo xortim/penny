@@ -86,8 +86,8 @@ func TestLatest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Latest() error: %v", err)
 	}
-	if !strings.Contains(got, "Unreleased") {
-		t.Errorf("Latest() should contain 'Unreleased', got:\n%s", got)
+	if !strings.Contains(got, "Latest Changes") {
+		t.Errorf("Latest() should contain 'Latest Changes', got:\n%s", got)
 	}
 	if !strings.Contains(got, "Add test coverage") {
 		t.Errorf("Latest() should contain body content, got:\n%s", got)
@@ -105,13 +105,13 @@ func TestLatestEmpty(t *testing.T) {
 func TestSince(t *testing.T) {
 	cl := Parse(testChangelog)
 
-	t.Run("since 0.1 returns Unreleased and 0.2", func(t *testing.T) {
+	t.Run("since 0.1 returns Latest Changes and 0.2", func(t *testing.T) {
 		got, err := cl.Since("0.1")
 		if err != nil {
 			t.Fatalf("Since(\"0.1\") error: %v", err)
 		}
-		if !strings.Contains(got, "Unreleased") {
-			t.Errorf("Since(\"0.1\") should contain Unreleased")
+		if !strings.Contains(got, "Latest Changes") {
+			t.Errorf("Since(\"0.1\") should contain Latest Changes")
 		}
 		if !strings.Contains(got, "0.2") {
 			t.Errorf("Since(\"0.1\") should contain 0.2")
@@ -121,13 +121,13 @@ func TestSince(t *testing.T) {
 		}
 	})
 
-	t.Run("since 0.2 returns only Unreleased", func(t *testing.T) {
+	t.Run("since 0.2 returns only Latest Changes", func(t *testing.T) {
 		got, err := cl.Since("0.2")
 		if err != nil {
 			t.Fatalf("Since(\"0.2\") error: %v", err)
 		}
-		if !strings.Contains(got, "Unreleased") {
-			t.Errorf("Since(\"0.2\") should contain Unreleased")
+		if !strings.Contains(got, "Latest Changes") {
+			t.Errorf("Since(\"0.2\") should contain Latest Changes")
 		}
 		if strings.Contains(got, "*v0.2*") {
 			t.Errorf("Since(\"0.2\") should not contain 0.2 section")
@@ -179,7 +179,7 @@ func TestFormatSection(t *testing.T) {
 				Body:    "### Added\n\n- Something new",
 			},
 			want: []string{
-				"*Unreleased*",
+				"*Latest Changes*",
 				"*Added*",
 				"- Something new",
 			},
