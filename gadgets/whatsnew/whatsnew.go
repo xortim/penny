@@ -43,9 +43,7 @@ func processWhatsNew(api slackclient.Client, ev slackevents.AppMentionEvent, mes
 	}
 
 	_, _, err = api.PostMessage(ev.Channel,
-		slack.MsgOptionBlocks(slack.NewSectionBlock(
-			slack.NewTextBlockObject(slack.MarkdownType, text, false, false), nil, nil,
-		)),
+		slack.MsgOptionBlocks(slack.NewMarkdownBlock("", text)),
 		slack.MsgOptionText(text, false),
 		slack.MsgOptionTS(ev.TimeStamp),
 	)
@@ -60,8 +58,8 @@ func formatWhatsNew(message string, raw string) (string, error) {
 
 	if m := sinceRe.FindStringSubmatch(message); m != nil {
 		version := strings.TrimPrefix(m[1], "v")
-		return cl.Since(version)
+		return cl.SinceMarkdown(version)
 	}
 
-	return cl.Latest()
+	return cl.LatestMarkdown()
 }

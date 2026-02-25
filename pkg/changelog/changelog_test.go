@@ -152,6 +152,131 @@ func TestSince(t *testing.T) {
 	})
 }
 
+func TestLatestMarkdown(t *testing.T) {
+	cl := Parse(testChangelog)
+	got, err := cl.LatestMarkdown()
+	if err != nil {
+		t.Fatalf("LatestMarkdown() error: %v", err)
+	}
+	if !strings.Contains(got, "**Latest Changes**") {
+		t.Errorf("LatestMarkdown() should contain '**Latest Changes**', got:\n%s", got)
+	}
+	if !strings.Contains(got, "Add test coverage") {
+		t.Errorf("LatestMarkdown() should contain body content, got:\n%s", got)
+	}
+}
+
+func TestLatestMarkdownEmpty(t *testing.T) {
+	cl := Parse("")
+	_, err := cl.LatestMarkdown()
+	if err == nil {
+		t.Error("LatestMarkdown() on empty changelog should return error")
+	}
+}
+
+func TestSinceMarkdown(t *testing.T) {
+	cl := Parse(testChangelog)
+
+	t.Run("since 0.1 returns Latest Changes and 0.2", func(t *testing.T) {
+		got, err := cl.SinceMarkdown("0.1")
+		if err != nil {
+			t.Fatalf("SinceMarkdown(\"0.1\") error: %v", err)
+		}
+		if !strings.Contains(got, "**Latest Changes**") {
+			t.Errorf("SinceMarkdown(\"0.1\") should contain **Latest Changes**")
+		}
+		if !strings.Contains(got, "**v0.2**") {
+			t.Errorf("SinceMarkdown(\"0.1\") should contain **v0.2**")
+		}
+	})
+
+	t.Run("since 0.2 returns only Latest Changes", func(t *testing.T) {
+		got, err := cl.SinceMarkdown("0.2")
+		if err != nil {
+			t.Fatalf("SinceMarkdown(\"0.2\") error: %v", err)
+		}
+		if !strings.Contains(got, "**Latest Changes**") {
+			t.Errorf("SinceMarkdown(\"0.2\") should contain **Latest Changes**")
+		}
+		if strings.Contains(got, "**v0.2**") {
+			t.Errorf("SinceMarkdown(\"0.2\") should not contain 0.2 section")
+		}
+	})
+
+	t.Run("since nonexistent version returns error", func(t *testing.T) {
+		_, err := cl.SinceMarkdown("9.9")
+		if err == nil {
+			t.Error("SinceMarkdown(\"9.9\") should return error for unknown version")
+		}
+	})
+
+	t.Run("since latest version returns up to date message", func(t *testing.T) {
+		got, err := cl.SinceMarkdown("Unreleased")
+		if err != nil {
+			t.Fatalf("SinceMarkdown(\"Unreleased\") unexpected error: %v", err)
+		}
+		if got != "You're up to date!" {
+			t.Errorf("SinceMarkdown(\"Unreleased\") = %q, want %q", got, "You're up to date!")
+		}
+	})
+}
+
+func TestFormatSectionMarkdown(t *testing.T) {
+	tests := []struct {
+		name    string
+		section Section
+		want    []string
+	}{
+		{
+			name: "versioned section preserves markdown links and bold",
+			section: Section{
+				Version: "0.2",
+				Date:    "2026-02-24",
+				Body:    "### Added\n\n- Add [what's new](https://example.com) command\n- **Bold** feature",
+			},
+			want: []string{
+				"**v0.2** (2026-02-24)",
+				"### Added",
+				"[what's new](https://example.com)",
+				"**Bold**",
+			},
+		},
+		{
+			name: "unreleased section",
+			section: Section{
+				Version: "Unreleased",
+				Body:    "### Added\n\n- Something new",
+			},
+			want: []string{
+				"**Latest Changes**",
+				"### Added",
+				"- Something new",
+			},
+		},
+		{
+			name: "versioned section without date",
+			section: Section{
+				Version: "1.0",
+				Body:    "- A change\n",
+			},
+			want: []string{
+				"**v1.0**",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FormatSectionMarkdown(tt.section)
+			for _, w := range tt.want {
+				if !strings.Contains(got, w) {
+					t.Errorf("FormatSectionMarkdown() missing %q in:\n%s", w, got)
+				}
+			}
+		})
+	}
+}
+
 func TestFormatSection(t *testing.T) {
 	tests := []struct {
 		name    string

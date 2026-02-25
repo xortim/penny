@@ -64,6 +64,14 @@ func (c Changelog) Latest() (string, error) {
 	return FormatSection(c.Sections[0]), nil
 }
 
+// LatestMarkdown returns the first (most recent) section formatted as standard markdown.
+func (c Changelog) LatestMarkdown() (string, error) {
+	if len(c.Sections) == 0 {
+		return "", fmt.Errorf("changelog is empty")
+	}
+	return FormatSectionMarkdown(c.Sections[0]), nil
+}
+
 // Since returns all sections newer than the specified version, formatted as Slack mrkdwn.
 func (c Changelog) Since(version string) (string, error) {
 	idx := -1
@@ -83,6 +91,29 @@ func (c Changelog) Since(version string) (string, error) {
 	var parts []string
 	for _, s := range c.Sections[:idx] {
 		parts = append(parts, FormatSection(s))
+	}
+	return strings.Join(parts, "\n"), nil
+}
+
+// SinceMarkdown returns all sections newer than the specified version, formatted as standard markdown.
+func (c Changelog) SinceMarkdown(version string) (string, error) {
+	idx := -1
+	for i, s := range c.Sections {
+		if s.Version == version {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return "", fmt.Errorf("version %q not found in changelog", version)
+	}
+	if idx == 0 {
+		return "You're up to date!", nil
+	}
+
+	var parts []string
+	for _, s := range c.Sections[:idx] {
+		parts = append(parts, FormatSectionMarkdown(s))
 	}
 	return strings.Join(parts, "\n"), nil
 }
@@ -109,4 +140,21 @@ func FormatSection(s Section) string {
 	body = boldRe.ReplaceAllString(body, "*$1*")
 
 	return header + "\n" + strings.TrimRight(body, "\n") + "\n"
+}
+
+// FormatSectionMarkdown formats a changelog section as standard markdown,
+// suitable for Slack's Markdown Block which handles rendering natively.
+func FormatSectionMarkdown(s Section) string {
+	var header string
+	if s.Version == "Unreleased" {
+		header = "**Latest Changes**"
+	} else {
+		if s.Date != "" {
+			header = fmt.Sprintf("**v%s** (%s)", s.Version, s.Date)
+		} else {
+			header = fmt.Sprintf("**v%s**", s.Version)
+		}
+	}
+
+	return header + "\n" + strings.TrimRight(s.Body, "\n") + "\n"
 }
