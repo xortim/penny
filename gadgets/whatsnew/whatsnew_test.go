@@ -1,6 +1,7 @@
 package whatsnew
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -108,6 +109,7 @@ func TestProcessWhatsNew(t *testing.T) {
 		name        string
 		message     string
 		raw         string
+		postErr     error
 		wantPost    bool
 		wantChannel string
 	}{
@@ -125,17 +127,27 @@ func TestProcessWhatsNew(t *testing.T) {
 			wantPost:    true,
 			wantChannel: "C123",
 		},
+		{
+			name:        "PostMessage failure does not panic",
+			message:     "what's new",
+			raw:         testChangelog,
+			postErr:     fmt.Errorf("slack API down"),
+			wantPost:    true,
+			wantChannel: "C123",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			postCalled := false
 			postedChannel := ""
+			optionCount := 0
 			mock := &slackclient.MockClient{
 				PostMessageFn: func(channelID string, options ...slack.MsgOption) (string, string, error) {
 					postCalled = true
 					postedChannel = channelID
-					return channelID, "ts", nil
+					optionCount = len(options)
+					return channelID, "ts", tt.postErr
 				},
 			}
 
@@ -151,6 +163,9 @@ func TestProcessWhatsNew(t *testing.T) {
 			}
 			if tt.wantPost && postedChannel != tt.wantChannel {
 				t.Errorf("PostMessage channel = %q, want %q", postedChannel, tt.wantChannel)
+			}
+			if tt.wantPost && optionCount != 3 {
+				t.Errorf("PostMessage received %d options, want 3 (blocks, text, ts)", optionCount)
 			}
 		})
 	}

@@ -43,7 +43,7 @@ func processWhatsNew(api slackclient.Client, ev slackevents.AppMentionEvent, mes
 	}
 
 	_, _, err = api.PostMessage(ev.Channel,
-		slack.MsgOptionBlocks(slack.NewMarkdownBlock("", text)),
+		slack.MsgOptionBlocks(slack.NewMarkdownBlock("whatsnew-response", text)),
 		slack.MsgOptionText(text, false),
 		slack.MsgOptionTS(ev.TimeStamp),
 	)

@@ -62,10 +62,13 @@ clean: ## Clean the workspace including modcache and dist/
 .PHONY: tools
 tools: ## Install tools needed for development
 	@$(MAKE) --no-print-directory log-$@
-	@go get -u golang.org/x/lint/golint
+	@go install golang.org/x/lint/golint@latest
+	@go install github.com/goreleaser/goreleaser/v2@latest
+	@echo "NOTE: git-cliff must be installed separately (brew install git-cliff or cargo install git-cliff)"
 
 ###############
 ##@ Release
+# Requires: goreleaser (make tools), git-cliff (see above)
 
 .PHONY: changelog
 changelog: ## Generate CHANGELOG.md using git-cliff
