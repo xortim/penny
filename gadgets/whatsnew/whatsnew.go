@@ -33,15 +33,18 @@ func GetMentionRoutes(raw string) []router.MentionRoute {
 
 // processWhatsNew contains the testable core logic.
 func processWhatsNew(api slackclient.Client, ev slackevents.AppMentionEvent, message string, raw string) {
+	logger := log.With().Str("channel", ev.Channel).Str("user", ev.User).Logger()
+	logger.Debug().Str("message", message).Msg("processing what's new request")
+
 	text, err := formatWhatsNew(message, raw)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to format changelog")
+		logger.Error().Err(err).Msg("failed to format changelog")
 		text = "Sorry, I couldn't retrieve the changelog."
 	}
 
 	_, _, err = api.PostMessage(ev.Channel, slack.MsgOptionText(text, false), slack.MsgOptionTS(ev.TimeStamp))
 	if err != nil {
-		log.Error().Err(err).Str("channel", ev.Channel).Msg("failed to post what's new reply")
+		logger.Error().Err(err).Msg("failed to post what's new reply")
 	}
 }
 
