@@ -42,7 +42,13 @@ func processWhatsNew(api slackclient.Client, ev slackevents.AppMentionEvent, mes
 		text = "Sorry, I couldn't retrieve the changelog."
 	}
 
-	_, _, err = api.PostMessage(ev.Channel, slack.MsgOptionText(text, false), slack.MsgOptionTS(ev.TimeStamp))
+	_, _, err = api.PostMessage(ev.Channel,
+		slack.MsgOptionBlocks(slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType, text, false, false), nil, nil,
+		)),
+		slack.MsgOptionText(text, false),
+		slack.MsgOptionTS(ev.TimeStamp),
+	)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to post what's new reply")
 	}

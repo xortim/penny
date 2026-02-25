@@ -22,7 +22,7 @@ var (
 	// Matches ## [version] or ## [version] - date
 	headerRe = regexp.MustCompile(`^## \[(.+?)\](?:\s*-\s*(.+))?`)
 	// Matches ### Heading
-	subheadRe = regexp.MustCompile(`^### (.+)`)
+	subheadRe = regexp.MustCompile(`(?m)^### (.+)`)
 	// Matches [text](url)
 	linkRe = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
 	// Matches **bold**
