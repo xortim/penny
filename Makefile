@@ -67,13 +67,18 @@ tools: ## Install tools needed for development
 ###############
 ##@ Release
 
+.PHONY: changelog
+changelog: ## Generate CHANGELOG.md using git-cliff
+	@$(MAKE) --no-print-directory log-$@
+	git-cliff --output CHANGELOG.md
+
 .PHONY: snapshot
-snapshot: ## Build a snapshot release locally (no publish)
+snapshot: changelog ## Build a snapshot release locally (no publish)
 	@$(MAKE) --no-print-directory log-$@
 	goreleaser release --snapshot --clean
 
 .PHONY: release
-release: ## Create a release with goreleaser
+release: changelog ## Create a release with goreleaser
 	@$(MAKE) --no-print-directory log-$@
 	goreleaser release --clean
 
