@@ -21,9 +21,9 @@ all: clean verify lint test build
 ###############
 ##@ Development
 
-# This is to allow make to detect when other targes should be rerun (source changes)
+# This is to allow make to detect when other targets should be rerun (source changes)
 $(GO_FILES):
-	@stat -c "%y %n" "$@"
+	@ls -l "$@"
 
 .PHONY: $(EXECUTABLE)
 build: $(ARTIFACT) ## Build binary
@@ -33,7 +33,7 @@ $(ARTIFACT): $(GO_FILES)
 	@ln -fs $(GOOS)-$(GOARCH)/$(EXECUTABLE) dist/$(EXECUTABLE)
 
 .PHONY: verify
-verify:   ## Verify 'vendor' dependencies
+verify:   ## Verify module dependencies
 	@ $(MAKE) --no-print-directory log-$@
 	$(GO) mod verify
 
@@ -42,10 +42,10 @@ container: ## Build container using docker
 	@$(MAKE) --no-print-directory log-$@
 	@docker build -t $(EXECUTABLE):local .
 
-.PHONY: lint ## Lint the project
-lint:
+.PHONY: lint
+lint: ## Lint the project
 	@$(MAKE) --no-print-directory log-$@
-	@golint
+	@staticcheck ./...
 
 .PHONY: test
 test: coverage.out ## Execute tests
@@ -54,15 +54,15 @@ coverage.out: $(GO_FILES)
 	$(GO) test -coverprofile=coverage.out -covermode=atomic -v ./...
 
 .PHONY: clean
-clean: ## Clean the workspace including modcache and dist/
+clean: ## Clean the workspace and dist/
 	@$(MAKE) --no-print-directory log-$@
-	@$(GO) clean -modcache
+	@$(GO) clean
 	@rm -rf dist/* coverage.out
 
 .PHONY: tools
 tools: ## Install tools needed for development
 	@$(MAKE) --no-print-directory log-$@
-	@go install golang.org/x/lint/golint@latest
+	@go install honnef.co/go/tools/cmd/staticcheck@latest
 	@go install github.com/goreleaser/goreleaser/v2@latest
 	@echo "NOTE: git-cliff must be installed separately (brew install git-cliff or cargo install git-cliff)"
 
@@ -82,19 +82,6 @@ snapshot: changelog ## Build a snapshot release locally (no publish)
 
 .PHONY: release
 release: changelog ## Create a release with goreleaser
-	@$(MAKE) --no-print-directory log-$@
-	goreleaser release --clean
-
-###############
-##@ Release
-
-.PHONY: snapshot
-snapshot: ## Build a snapshot release locally (no publish)
-	@$(MAKE) --no-print-directory log-$@
-	goreleaser release --snapshot --clean
-
-.PHONY: release
-release: ## Create a release with goreleaser
 	@$(MAKE) --no-print-directory log-$@
 	goreleaser release --clean
 
