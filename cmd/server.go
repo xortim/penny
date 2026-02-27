@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xortim/penny/conf"
 	"github.com/xortim/penny/gadgets/hallmonitor"
+	"github.com/xortim/penny/gadgets/help"
 	"github.com/xortim/penny/gadgets/whatsnew"
 	"github.com/xortim/penny/pkg/slackclient"
 )
@@ -50,6 +51,8 @@ func server(cmd *cobra.Command, args []string) error {
 	myBot.Router.MentionRoutes = make(map[string]router.MentionRoute)
 	myBot.Router.AddMentionRoutes(whatsnew.GetMentionRoutes(ChangelogRaw))
 	log.Debug().Int("changelog_bytes", len(ChangelogRaw)).Msg("registered what's new mention routes")
+
+	myBot.Router.AddSlashCommandRoutes(help.GetSlashCommandRoutes())
 
 	if err := joinSpamFeedChannel(myBot.Client); err != nil {
 		return fmt.Errorf("failed to join spam-feed channel: %w", err)
