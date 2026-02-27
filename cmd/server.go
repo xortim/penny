@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	gadget "github.com/gadget-bot/gadget/core"
-	"github.com/gadget-bot/gadget/router"
 	"github.com/rs/zerolog/log"
 	"github.com/slack-go/slack"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/xortim/penny/conf"
 	"github.com/xortim/penny/gadgets/hallmonitor"
+	"github.com/xortim/penny/gadgets/help"
 	"github.com/xortim/penny/gadgets/whatsnew"
 	"github.com/xortim/penny/pkg/slackclient"
 )
@@ -44,12 +44,11 @@ func server(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	myBot.Router.ChannelMessageRoutes = make(map[string]router.ChannelMessageRoute)
 	myBot.Router.AddChannelMessageRoutes(hallmonitor.GetChannelMessageRoutes())
-
-	myBot.Router.MentionRoutes = make(map[string]router.MentionRoute)
 	myBot.Router.AddMentionRoutes(whatsnew.GetMentionRoutes(ChangelogRaw))
 	log.Debug().Int("changelog_bytes", len(ChangelogRaw)).Msg("registered what's new mention routes")
+
+	myBot.Router.AddSlashCommandRoutes(help.GetSlashCommandRoutes())
 
 	if err := joinSpamFeedChannel(myBot.Client); err != nil {
 		return fmt.Errorf("failed to join spam-feed channel: %w", err)
