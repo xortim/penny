@@ -11,9 +11,9 @@ Penny is a community moderation Slack bot for spam detection/removal, built in G
 ```bash
 make build          # Build binary to dist/$(GOOS)-$(GOARCH)/penny
 make test           # Run tests with coverage report
-make lint           # Run golint
+make lint           # Run staticcheck
 make all            # Full pipeline: clean, verify, lint, test, build
-make tools          # Install golint dependency
+make tools          # Install staticcheck dependency
 make start-db       # Start local MariaDB 10.5 (needs DB_USER, DB_NAME, DB_PASS, DB_ROOT_PASS env vars)
 make stop-db        # Stop local MariaDB
 make container      # Build Docker image as penny:local
@@ -62,6 +62,8 @@ When implementing tests, always use interfaces and dependency injection so handl
 ## Git & GitHub
 
 For GitHub operations (PRs, issues, vulnerabilities), use the `gh` CLI tool directly rather than trying to access GitHub APIs programmatically.
+
+When opening issues for Penny or Gadget, apply the best-fitting label and issue type. Scan existing issues to determine if there are relationships that should be established. Ask before changing existing relationships.
 
 ## Branching
 
