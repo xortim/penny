@@ -3,7 +3,7 @@ module github.com/xortim/penny
 go 1.26.0
 
 require (
-	github.com/gadget-bot/gadget v0.3.0
+	github.com/gadget-bot/gadget v0.6.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/rs/zerolog v1.34.0
 	github.com/slack-go/slack v0.18.0
