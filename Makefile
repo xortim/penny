@@ -7,13 +7,13 @@ GOARCH      ?= $(shell $(GO) env GOARCH)
 PACKAGENAME := $(shell go list -m -f '{{.Path}}')
 GOLDFLAGS   ?= -s -w -X $(PACKAGENAME)/conf.Executable=$(EXECUTABLE) -X $(PACKAGENAME)/conf.GitVersion=$(GITVERSION)
 GOBUILD     ?= CGO_ENABLED=0 $(GO) build -ldflags="$(GOLDFLAGS)"
-GO_FILES    := $(shell find . -type f -name '*.go')
+GO_FILES    := $(shell find . -type f -name '*.go' -not -path './vendor/*')
 
 EXECUTABLE  := penny
 ARTIFACT    := dist/$(GOOS)-$(GOARCH)/$(EXECUTABLE)
 
-DB_PASS      ?= $(shell openssl rand -hex 16)
-DB_ROOT_PASS ?= $(shell openssl rand -hex 16)
+DB_PASS      := $(or $(DB_PASS),$(shell openssl rand -hex 16))
+DB_ROOT_PASS := $(or $(DB_ROOT_PASS),$(shell openssl rand -hex 16))
 
 .PHONY: all
 all: clean verify lint test build
@@ -25,7 +25,7 @@ all: clean verify lint test build
 $(GO_FILES):
 	@ls -l "$@"
 
-.PHONY: $(EXECUTABLE)
+.PHONY: build
 build: $(ARTIFACT) ## Build binary
 $(ARTIFACT): $(GO_FILES)
 	@$(MAKE) --no-print-directory log-build
@@ -33,14 +33,14 @@ $(ARTIFACT): $(GO_FILES)
 	@ln -fs $(GOOS)-$(GOARCH)/$(EXECUTABLE) dist/$(EXECUTABLE)
 
 .PHONY: verify
-verify:   ## Verify module dependencies
-	@ $(MAKE) --no-print-directory log-$@
+verify: ## Verify module dependencies
+	@$(MAKE) --no-print-directory log-$@
 	$(GO) mod verify
 
 .PHONY: container
 container: ## Build container using docker
 	@$(MAKE) --no-print-directory log-$@
-	@docker build -t $(EXECUTABLE):local .
+	@docker build -t $(EXECUTABLE):$(GITVERSION) -t $(EXECUTABLE):local .
 
 .PHONY: lint
 lint: ## Lint the project
@@ -48,8 +48,7 @@ lint: ## Lint the project
 	@staticcheck ./...
 
 .PHONY: test
-test: coverage.out ## Execute tests
-coverage.out: $(GO_FILES)
+test: ## Execute tests
 	@$(MAKE) --no-print-directory log-$@
 	$(GO) test -coverprofile=coverage.out -covermode=atomic -v ./...
 
