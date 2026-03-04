@@ -59,6 +59,31 @@ Tests use Go's table-driven testing pattern. Test coverage is in `pkg/` utilitie
 
 When implementing tests, always use interfaces and dependency injection so handlers accept mock clients rather than creating their own API clients. Never instantiate real API clients (e.g., Slack, GitHub) inside handlers.
 
+## Commit Messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+**Breaking changes:** append `!` after type/scope, or add `BREAKING CHANGE:` in the footer.
+
+Examples:
+```
+feat(hallmonitor): add timezone-based anomaly scoring
+fix(parsers): handle permalinks with query strings
+docs: update configuration reference in README
+chore: upgrade gadget to v0.7.0
+feat!: replace DB backend — requires schema migration
+```
+
 ## Git & GitHub
 
 For GitHub operations (PRs, issues, vulnerabilities), use the `gh` CLI tool directly rather than trying to access GitHub APIs programmatically.
