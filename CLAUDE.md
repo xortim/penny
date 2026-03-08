@@ -11,9 +11,11 @@ Penny is a community moderation Slack bot for spam detection/removal, built in G
 ```bash
 make build          # Build binary to dist/$(GOOS)-$(GOARCH)/penny
 make test           # Run tests with coverage report
-make lint           # Run staticcheck
+make lint           # Run golangci-lint (also runs fmt check)
+make fmt            # Check formatting with golangci-lint (diff only)
+make fmt-fix        # Apply formatting fixes with golangci-lint
 make all            # Full pipeline: clean, verify, lint, test, build
-make tools          # Install staticcheck dependency
+make tools          # Install golangci-lint and goreleaser
 make start-db       # Start local MariaDB 10.5 (needs DB_USER, DB_NAME, DB_PASS, DB_ROOT_PASS env vars)
 make stop-db        # Stop local MariaDB
 make container      # Build Docker image as penny:local
@@ -86,11 +88,11 @@ feat!: replace DB backend — requires schema migration
 
 ## Git & GitHub
 
-For GitHub operations (PRs, issues, vulnerabilities), use the `gh` CLI tool directly rather than trying to access GitHub APIs programmatically.
+For GitHub operations (PRs, issues, vulnerabilities), use the `gh` CLI tool or the available MCP GitHub tools.
 
-When opening issues for Penny or Gadget, apply the best-fitting label and issue type. Scan existing issues to determine if there are relationships that should be established. Ask before changing existing relationships.
+When opening issues for Penny or Gadget, always apply an issue type and the best-fitting label. Scan existing issues to identify relationships (sub-issues, duplicates, related issues). Ask before changing existing relationships.
 
 ## Branching
 
-- `main` — production releases
-- `develop` — active development (default working branch)
+- `main` — production releases only; NEVER commit directly to main
+- Always create a feature branch and open a PR for all changes

@@ -233,11 +233,11 @@ func TestMsgRefToMessage(t *testing.T) {
 	ref := slack.NewRefToMessage("C123", "1234567890.000100")
 
 	tests := []struct {
-		name      string
-		mock      *slackclient.MockClient
-		wantErr   string
-		wantChan  string
-		wantTS    string
+		name     string
+		mock     *slackclient.MockClient
+		wantErr  string
+		wantChan string
+		wantTS   string
 	}{
 		{
 			name: "JoinConversation error",

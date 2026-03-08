@@ -18,8 +18,8 @@ func GetSlashCommandRoutes() []router.SlashCommandRoute {
 				Help:        "/help",
 			},
 			Command:           "/help",
-			ImmediateResponse: formatHelp(),
-			Plugin: func(r router.Router, route router.Route, api slack.Client, cmd slack.SlashCommand) {
+			ImmediateResponse: formatHelp,
+			Plugin: func(ctx router.HandlerContext, cmd slack.SlashCommand) {
 				// No-op: all content is delivered via ImmediateResponse.
 			},
 		},

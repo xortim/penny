@@ -42,10 +42,20 @@ container: ## Build container using docker
 	@$(MAKE) --no-print-directory log-$@
 	@docker build -t $(EXECUTABLE):$(GITVERSION) -t $(EXECUTABLE):local .
 
-.PHONY: lint
-lint: ## Lint the project
+.PHONY: fmt
+fmt: ## Check the project follows idiomatic formatting
 	@$(MAKE) --no-print-directory log-$@
-	@staticcheck ./...
+	@golangci-lint fmt --diff
+
+.PHONY: fmt-fix
+fmt-fix: ## Apply idiomatic formatting fixes
+	@$(MAKE) --no-print-directory log-$@
+	@golangci-lint fmt
+
+.PHONY: lint
+lint: fmt ## Lint the project
+	@$(MAKE) --no-print-directory log-$@
+	@golangci-lint run
 
 .PHONY: test
 test: ## Execute tests
@@ -61,7 +71,7 @@ clean: ## Clean the workspace and dist/
 .PHONY: tools
 tools: ## Install tools needed for development
 	@$(MAKE) --no-print-directory log-$@
-	@go install honnef.co/go/tools/cmd/staticcheck@latest
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1
 	@go install github.com/goreleaser/goreleaser/v2@latest
 	@echo "NOTE: git-cliff must be installed separately (brew install git-cliff or cargo install git-cliff)"
 

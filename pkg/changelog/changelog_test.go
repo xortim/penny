@@ -204,4 +204,3 @@ func TestFormatSectionMarkdown(t *testing.T) {
 		})
 	}
 }
-
