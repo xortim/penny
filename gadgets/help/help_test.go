@@ -96,8 +96,8 @@ func TestGetSlashCommandRoutes(t *testing.T) {
 	if route.Name != "help.help" {
 		t.Errorf("route Name = %q, want %q", route.Name, "help.help")
 	}
-	if route.ImmediateResponse == "" {
-		t.Error("route ImmediateResponse is empty")
+	if route.ImmediateResponse == nil {
+		t.Error("route ImmediateResponse is nil")
 	}
 	if route.Plugin == nil {
 		t.Error("route Plugin is nil")

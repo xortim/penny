@@ -24,8 +24,8 @@ func GetMentionRoutes(raw string) []router.MentionRoute {
 				Description: "Show recent changelog entries",
 				Help:        "what's new [since <version>]",
 			},
-			Plugin: func(r router.Router, route router.Route, api slack.Client, ev slackevents.AppMentionEvent, message string) {
-				processWhatsNew(&api, ev, message, raw)
+			Plugin: func(ctx router.HandlerContext, ev slackevents.AppMentionEvent, message string) {
+				processWhatsNew(ctx.BotClient, ev, message, raw)
 			},
 		},
 	}

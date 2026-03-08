@@ -38,9 +38,9 @@ func monitorSpamFeedMessages() *router.ChannelMessageRoute {
 }
 
 // handleSpamFeedMessage is the Gadget-registered handler. Its signature is fixed by the framework.
-func handleSpamFeedMessage(r router.Router, route router.Route, api slack.Client, ev slackevents.MessageEvent, message string) {
+func handleSpamFeedMessage(ctx router.HandlerContext, ev slackevents.MessageEvent, message string) {
 	userApi := slack.New(viper.GetString("slack.user_oauth_token"))
-	ProcessSpamFeedMessage(r, route, &api, userApi, ev, message)
+	ProcessSpamFeedMessage(ctx.Router, ctx.Route, ctx.BotClient, userApi, ev, message)
 }
 
 // ProcessSpamFeedMessage contains the testable core logic extracted from handleSpamFeedMessage.

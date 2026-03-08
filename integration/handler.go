@@ -2,7 +2,7 @@ package integration
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 
@@ -17,14 +17,14 @@ import (
 // executes the handler — all without requiring a database or gadget.Run().
 type TestHandler struct {
 	SigningSecret string
-	BotUID       string
-	APIClient    *slack.Client // bot token client pointed at mock server
-	UserClient   *slack.Client // user token client pointed at mock server
+	BotUID        string
+	APIClient     *slack.Client // bot token client pointed at mock server
+	UserClient    *slack.Client // user token client pointed at mock server
 }
 
 // ServeHTTP implements http.Handler, replicating Gadget's /gadget endpoint.
 func (h *TestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

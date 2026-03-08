@@ -22,8 +22,8 @@ func TestJoinSpamFeedChannel(t *testing.T) {
 		return slack.Channel{
 			GroupConversation: slack.GroupConversation{
 				Conversation: slack.Conversation{
-					ID:              id,
-					NameNormalized:  nameNormalized,
+					ID:             id,
+					NameNormalized: nameNormalized,
 				},
 			},
 		}

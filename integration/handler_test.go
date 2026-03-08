@@ -14,8 +14,8 @@ import (
 const (
 	testSigningSecret = "test-signing-secret-1234"
 	testBotUID        = "U_BOT"
-	testBotToken      = "xoxb-test-token"
-	testUserToken     = "xoxp-test-user-token"
+	testBotToken      = "xoxb-test-token"      //nolint:gosec
+	testUserToken     = "xoxp-test-user-token" //nolint:gosec
 
 	spamFeedChan = "C_SPAM_FEED"
 	spamFeedTS   = "1111111111.000100"
@@ -32,18 +32,18 @@ const (
 func setupViper(t *testing.T, overrides map[string]interface{}) {
 	t.Helper()
 	defaults := map[string]interface{}{
-		"slack.user_oauth_token":               testUserToken,
-		"spam_feed.channel":                    spamFeedName,
-		"spam_feed.anomaly_scores.reported":    2,
+		"slack.user_oauth_token":                testUserToken,
+		"spam_feed.channel":                     spamFeedName,
+		"spam_feed.anomaly_scores.reported":     2,
 		"spam_feed.anomaly_scores.low_activity": 1,
-		"spam_feed.anomaly_scores.outside_tz":  2,
-		"spam_feed.activity_low_watermark":     10,
-		"spam_feed.local_timezone":             "America/New_York",
-		"spam_feed.max_anomaly_score":          5,
-		"spam_feed.reaction_emoji_hit":         "no_entry",
-		"spam_feed.reaction_emoji_miss":        "white_check_mark",
-		"spam_feed.emoji":                      "spam",
-		"spam_feed.reacji_response":            "Looking into it.",
+		"spam_feed.anomaly_scores.outside_tz":   2,
+		"spam_feed.activity_low_watermark":      10,
+		"spam_feed.local_timezone":              "America/New_York",
+		"spam_feed.max_anomaly_score":           5,
+		"spam_feed.reaction_emoji_hit":          "no_entry",
+		"spam_feed.reaction_emoji_miss":         "white_check_mark",
+		"spam_feed.emoji":                       "spam",
+		"spam_feed.reacji_response":             "Looking into it.",
 	}
 	for k, v := range defaults {
 		viper.Set(k, v)
@@ -99,9 +99,9 @@ func newTestSetup(t *testing.T, opts MockSlackOptions) (*MockSlackServer, *TestH
 
 	handler := &TestHandler{
 		SigningSecret: testSigningSecret,
-		BotUID:       testBotUID,
-		APIClient:    apiClient,
-		UserClient:   userClient,
+		BotUID:        testBotUID,
+		APIClient:     apiClient,
+		UserClient:    userClient,
 	}
 
 	return mock, handler
@@ -274,8 +274,8 @@ func TestSpamRemovalFlow(t *testing.T) {
 				Timestamp: opTS,
 			}},
 		},
-		UserTZ:           "Asia/Tokyo",  // different from America/New_York → tz score 2
-		SearchTotalCount: 2,             // below watermark 10 → low_activity score 1
+		UserTZ:           "Asia/Tokyo", // different from America/New_York → tz score 2
+		SearchTotalCount: 2,            // below watermark 10 → low_activity score 1
 	})
 	setupViper(t, nil)
 
@@ -316,12 +316,12 @@ func TestSpamRemovalFlow(t *testing.T) {
 
 func TestScoreComponentsViaFullPipeline(t *testing.T) {
 	tests := []struct {
-		name             string
-		userTZ           string
-		searchTotal      int
-		viperOverrides   map[string]interface{}
-		expectDelete     bool
-		expectReaction   string
+		name           string
+		userTZ         string
+		searchTotal    int
+		viperOverrides map[string]interface{}
+		expectDelete   bool
+		expectReaction string
 	}{
 		{
 			name:           "Only reported score (2) — below threshold",
@@ -333,7 +333,7 @@ func TestScoreComponentsViaFullPipeline(t *testing.T) {
 		{
 			name:           "Reported (2) + low activity (1) — below threshold",
 			userTZ:         "America/New_York",
-			searchTotal:    5,                  // below watermark → activity score 1
+			searchTotal:    5, // below watermark → activity score 1
 			expectDelete:   false,
 			expectReaction: "white_check_mark",
 		},

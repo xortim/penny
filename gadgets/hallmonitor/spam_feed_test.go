@@ -34,14 +34,6 @@ func noopPost(channelID string, options ...slack.MsgOption) (string, string, err
 	return channelID, "ts", nil
 }
 
-// noopDelete is a DeleteMessage stub that always succeeds.
-func noopDelete(channel, messageTimestamp string) (string, string, error) {
-	return channel, messageTimestamp, nil
-}
-
-// noopReaction is an AddReaction stub that always succeeds.
-func noopReaction(name string, item slack.ItemRef) error { return nil }
-
 // historyFor returns a GetConversationHistory stub that dispatches by ChannelID,
 // returning the matching message from the provided map.
 func historyFor(byChannel map[string]slack.Message) func(*slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
@@ -103,7 +95,7 @@ func TestUserTzScore(t *testing.T) {
 		{
 			name: "User TZ matches config returns 0",
 			config: map[string]interface{}{
-				"spam_feed.local_timezone":             "America/New_York",
+				"spam_feed.local_timezone":            "America/New_York",
 				"spam_feed.anomaly_scores.outside_tz": 2,
 			},
 			userTZ:    "America/New_York",
@@ -112,7 +104,7 @@ func TestUserTzScore(t *testing.T) {
 		{
 			name: "User TZ differs from config returns score",
 			config: map[string]interface{}{
-				"spam_feed.local_timezone":             "America/New_York",
+				"spam_feed.local_timezone":            "America/New_York",
 				"spam_feed.anomaly_scores.outside_tz": 2,
 			},
 			userTZ:    "Asia/Tokyo",
@@ -419,7 +411,7 @@ func TestAnomalyScoreInternal(t *testing.T) {
 			config: map[string]interface{}{
 				"spam_feed.anomaly_scores.reported": 2,
 				"spam_feed.activity_low_watermark":  0,
-				"spam_feed.local_timezone":           "",
+				"spam_feed.local_timezone":          "",
 			},
 			api:         apiMock("", nil),
 			userApi:     &slackclient.MockClient{},
@@ -442,9 +434,9 @@ func TestAnomalyScoreInternal(t *testing.T) {
 		{
 			name: "Outside timezone adds to score",
 			config: map[string]interface{}{
-				"spam_feed.anomaly_scores.reported":    2,
-				"spam_feed.activity_low_watermark":     0,
-				"spam_feed.local_timezone":             "America/New_York",
+				"spam_feed.anomaly_scores.reported":   2,
+				"spam_feed.activity_low_watermark":    0,
+				"spam_feed.local_timezone":            "America/New_York",
 				"spam_feed.anomaly_scores.outside_tz": 2,
 			},
 			api:         apiMock("Asia/Tokyo", nil),
@@ -459,7 +451,7 @@ func TestAnomalyScoreInternal(t *testing.T) {
 				"spam_feed.activity_low_watermark":      10,
 				"spam_feed.anomaly_scores.low_activity": 1,
 				"spam_feed.local_timezone":              "America/New_York",
-				"spam_feed.anomaly_scores.outside_tz":  2,
+				"spam_feed.anomaly_scores.outside_tz":   2,
 			},
 			api:         apiMock("Asia/Tokyo", nil),
 			userApi:     userApiMock(5, nil),
@@ -482,9 +474,9 @@ func TestAnomalyScoreInternal(t *testing.T) {
 		{
 			name: "userTzScore error is logged but execution continues",
 			config: map[string]interface{}{
-				"spam_feed.anomaly_scores.reported":    2,
-				"spam_feed.activity_low_watermark":     0,
-				"spam_feed.local_timezone":             "America/New_York",
+				"spam_feed.anomaly_scores.reported":   2,
+				"spam_feed.activity_low_watermark":    0,
+				"spam_feed.local_timezone":            "America/New_York",
 				"spam_feed.anomaly_scores.outside_tz": 2,
 			},
 			api:         apiMock("", errors.New("user not found")),
@@ -512,13 +504,13 @@ func TestAnomalyScoreInternal(t *testing.T) {
 // TestProcessSpamFeedMessage verifies the core handler logic end-to-end.
 func TestProcessSpamFeedMessage(t *testing.T) {
 	const (
-		spamChan   = "C_SPAM_FEED"
-		spamTS     = "1111111111.000100"
-		opChan     = "C02BZ36790B"
-		opTS       = "1639843883.000100"
-		opUser     = "U_OP_USER"
-		botUID     = "U_BOT_UID"
-		chanName   = "spam-feed"
+		spamChan = "C_SPAM_FEED"
+		spamTS   = "1111111111.000100"
+		opChan   = "C02BZ36790B"
+		opTS     = "1639843883.000100"
+		opUser   = "U_OP_USER"
+		botUID   = "U_BOT_UID"
+		chanName = "spam-feed"
 		// Valid non-threaded permalink matching opChan/opTS
 		opPermalink = "<https://orgname.slack.com/archives/C02BZ36790B/p1639843883000100>"
 		// Valid threaded permalink
@@ -536,13 +528,13 @@ func TestProcessSpamFeedMessage(t *testing.T) {
 	}
 
 	baseConfig := map[string]interface{}{
-		"spam_feed.channel":                    chanName,
-		"spam_feed.anomaly_scores.reported":    2,
-		"spam_feed.activity_low_watermark":     0,
-		"spam_feed.local_timezone":             "",
-		"spam_feed.max_anomaly_score":          5,
-		"spam_feed.reaction_emoji_hit":         "no_entry",
-		"spam_feed.reaction_emoji_miss":        "white_check_mark",
+		"spam_feed.channel":                 chanName,
+		"spam_feed.anomaly_scores.reported": 2,
+		"spam_feed.activity_low_watermark":  0,
+		"spam_feed.local_timezone":          "",
+		"spam_feed.max_anomaly_score":       5,
+		"spam_feed.reaction_emoji_hit":      "no_entry",
+		"spam_feed.reaction_emoji_miss":     "white_check_mark",
 	}
 
 	// baseRouter is a router.Router with BotUID set.

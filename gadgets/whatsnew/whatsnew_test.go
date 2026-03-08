@@ -70,10 +70,10 @@ func TestFormatWhatsNew(t *testing.T) {
 			wantContains: []string{"Latest Changes", "0.2"},
 		},
 		{
-			name:         "since unknown version returns error",
-			message:      "what's new since 9.9",
-			raw:          testChangelog,
-			wantErr:      true,
+			name:    "since unknown version returns error",
+			message: "what's new since 9.9",
+			raw:     testChangelog,
+			wantErr: true,
 		},
 		{
 			name:    "empty changelog returns error",
