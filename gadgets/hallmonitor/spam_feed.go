@@ -138,7 +138,6 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 	}
 }
 
-
 func anomalyScoreInternal(opMsg slack.Message, api slackclient.Client, userApi slackclient.Client, logger zerolog.Logger) (int, []string) {
 	reasons := make([]string, 0)
 	score := viper.GetInt("spam_feed.anomaly_scores.reported")
