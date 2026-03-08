@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	gadget "github.com/gadget-bot/gadget/core"
+	helpers "github.com/gadget-bot/gadget/plugins/helpers"
 	"github.com/rs/zerolog/log"
-	"github.com/slack-go/slack"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -13,7 +13,6 @@ import (
 	"github.com/xortim/penny/gadgets/hallmonitor"
 	"github.com/xortim/penny/gadgets/help"
 	"github.com/xortim/penny/gadgets/whatsnew"
-	"github.com/xortim/penny/pkg/slackclient"
 )
 
 func newServerCmd() *cobra.Command {
@@ -51,8 +50,13 @@ func server(cmd *cobra.Command, args []string) error {
 
 	myBot.Router.AddSlashCommandRoutes(help.GetSlashCommandRoutes())
 
-	if err := joinSpamFeedChannel(myBot.Client); err != nil {
+	channelName := viper.GetString("spam_feed.channel")
+	if channelName == "" {
+		log.Debug().Msg("no spam-feed channel configured, skipping auto-join")
+	} else if err := helpers.JoinChannelByName(*myBot.Client, channelName); err != nil {
 		return fmt.Errorf("failed to join spam-feed channel: %w", err)
+	} else {
+		log.Info().Str("channel", channelName).Msg("joined spam-feed channel")
 	}
 
 	log.Info().
@@ -62,46 +66,6 @@ func server(cmd *cobra.Command, args []string) error {
 		Msg("starting penny")
 
 	return myBot.Run()
-}
-
-// joinSpamFeedChannel finds the configured spam-feed channel by name and joins it.
-func joinSpamFeedChannel(api slackclient.Client) error {
-	channelName := viper.GetString("spam_feed.channel")
-	if channelName == "" {
-		log.Debug().Msg("no spam-feed channel configured, skipping auto-join")
-		return nil
-	}
-
-	log.Debug().Str("channel", channelName).Msg("searching for spam-feed channel")
-	cursor := ""
-	for {
-		params := &slack.GetConversationsParameters{
-			ExcludeArchived: true,
-			Limit:           200,
-			Types:           []string{"public_channel", "private_channel"},
-			Cursor:          cursor,
-		}
-		channels, nextCursor, err := api.GetConversations(params)
-		if err != nil {
-			return fmt.Errorf("listing conversations: %w", err)
-		}
-		for _, ch := range channels {
-			if ch.NameNormalized == channelName {
-				_, _, _, err := api.JoinConversation(ch.ID)
-				if err != nil {
-					return fmt.Errorf("joining channel %s: %w", channelName, err)
-				}
-				log.Info().Str("channel", channelName).Str("channel_id", ch.ID).Msg("joined spam-feed channel")
-				return nil
-			}
-		}
-		if nextCursor == "" {
-			break
-		}
-		cursor = nextCursor
-	}
-
-	return fmt.Errorf("channel %q not found", channelName)
 }
 
 func setupServerFlags(c *cobra.Command) {
