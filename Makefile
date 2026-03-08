@@ -47,6 +47,11 @@ fmt: ## Check the project follows idiomatic formatting
 	@$(MAKE) --no-print-directory log-$@
 	@golangci-lint fmt --diff
 
+.PHONY: fmt-fix
+fmt-fix: ## Apply idiomatic formatting fixes
+	@$(MAKE) --no-print-directory log-$@
+	@golangci-lint fmt
+
 .PHONY: lint
 lint: fmt ## Lint the project
 	@$(MAKE) --no-print-directory log-$@
