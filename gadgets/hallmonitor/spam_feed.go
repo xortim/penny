@@ -33,14 +33,10 @@ func monitorSpamFeedMessages() *router.ChannelMessageRoute {
 	var pluginRoute router.ChannelMessageRoute
 	pluginRoute.Name = "hallmonitor.monitorSpamFeed"
 	pluginRoute.Pattern = `.*`
-	pluginRoute.Plugin = handleSpamFeedMessage
+	pluginRoute.Plugin = func(ctx router.HandlerContext, ev slackevents.MessageEvent, message string) {
+		ProcessSpamFeedMessage(ctx.Router, ctx.Route, ctx.BotClient, ctx.UserClient, ev, message)
+	}
 	return &pluginRoute
-}
-
-// handleSpamFeedMessage is the Gadget-registered handler. Its signature is fixed by the framework.
-func handleSpamFeedMessage(ctx router.HandlerContext, ev slackevents.MessageEvent, message string) {
-	userApi := slack.New(viper.GetString("slack.user_oauth_token"))
-	ProcessSpamFeedMessage(ctx.Router, ctx.Route, ctx.BotClient, userApi, ev, message)
 }
 
 // ProcessSpamFeedMessage contains the testable core logic extracted from handleSpamFeedMessage.
@@ -140,18 +136,6 @@ func ProcessSpamFeedMessage(r router.Router, route router.Route, api slackclient
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to post debug response")
 	}
-}
-
-// AnomalyScore returns the calculated anomaly score for the provided ItemRef.
-// It is a thin wrapper that creates the user-token client, fetches the message, and delegates to anomalyScoreInternal.
-func AnomalyScore(ref slack.ItemRef, api slack.Client) (int, []string, error) {
-	userApi := slack.New(viper.GetString("slack.user_oauth_token"))
-	opMsg, err := conversations.MsgRefToMessage(ref, &api)
-	if err != nil {
-		return 0, nil, err
-	}
-	score, reasons := anomalyScoreInternal(opMsg, &api, userApi, log.Logger)
-	return score, reasons, nil
 }
 
 func anomalyScoreInternal(opMsg slack.Message, api slackclient.Client, userApi slackclient.Client, logger zerolog.Logger) (int, []string) {
