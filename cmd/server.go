@@ -30,8 +30,15 @@ func newServerCmd() *cobra.Command {
 }
 
 func server(cmd *cobra.Command, args []string) error {
+	channelName := viper.GetString("spam_feed.channel")
+	userToken := viper.GetString("slack.user_oauth_token")
+	if err := validateSpamFeedConfig(channelName, userToken); err != nil {
+		return err
+	}
+
 	myBot, err := gadget.SetupWithConfig(gadget.Config{
 		SlackOAuthToken: viper.GetString("slack.bot_oauth_token"),
+		SlackUserToken:  userToken,
 		SigningSecret:   viper.GetString("slack.signing_secret"),
 		DBUser:          viper.GetString("db.username"),
 		DBPass:          viper.GetString("db.password"),
@@ -50,7 +57,6 @@ func server(cmd *cobra.Command, args []string) error {
 
 	myBot.Router.AddSlashCommandRoutes(help.GetSlashCommandRoutes())
 
-	channelName := viper.GetString("spam_feed.channel")
 	if channelName == "" {
 		log.Debug().Msg("no spam-feed channel configured, skipping auto-join")
 	} else if err := helpers.JoinChannelByName(*myBot.Client, channelName); err != nil {
@@ -66,6 +72,18 @@ func server(cmd *cobra.Command, args []string) error {
 		Msg("starting penny")
 
 	return myBot.Run()
+}
+
+// validateSpamFeedConfig fails fast when spam-feed monitoring is enabled but no
+// Slack user token is configured. Spam removal (DeleteMessage) and activity
+// scoring (SearchMessages) both require a user-scoped token, so running with
+// the channel configured but no token would otherwise panic mid-request the
+// first time a message needed to be removed.
+func validateSpamFeedConfig(channelName, userToken string) error {
+	if channelName != "" && userToken == "" {
+		return fmt.Errorf("spam_feed.channel is configured but slack.user_oauth_token is not set; spam removal requires a Slack user token")
+	}
+	return nil
 }
 
 func setupServerFlags(c *cobra.Command) {
