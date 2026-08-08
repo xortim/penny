@@ -77,20 +77,6 @@ func TestRemovalReply(t *testing.T) {
 	}
 }
 
-// TestSafeUserClient verifies that a nil *slack.Client (gadget's signal for
-// "no user token configured") converts to a genuinely nil slackclient.Client
-// interface, rather than a non-nil interface wrapping a nil pointer.
-func TestSafeUserClient(t *testing.T) {
-	if got := safeUserClient(nil); got != nil {
-		t.Errorf("safeUserClient(nil) = %#v, want nil interface", got)
-	}
-
-	client := slack.New("xoxp-test-token")
-	if got := safeUserClient(client); got == nil {
-		t.Errorf("safeUserClient(non-nil) = nil, want non-nil interface")
-	}
-}
-
 // TestUserTzScore verifies timezone anomaly scoring.
 func TestUserTzScore(t *testing.T) {
 	tests := []struct {
@@ -169,7 +155,6 @@ func TestUserActivityScore(t *testing.T) {
 		config      map[string]interface{}
 		searchTotal int
 		searchErr   error
-		nilAPI      bool
 		wantScore   int
 		wantErr     bool
 	}{
@@ -177,13 +162,6 @@ func TestUserActivityScore(t *testing.T) {
 			name:      "Watermark disabled (0) returns 0 without API call",
 			config:    map[string]interface{}{"spam_feed.activity_low_watermark": 0},
 			wantScore: 0,
-		},
-		{
-			name:      "No user client configured returns error without panicking",
-			config:    map[string]interface{}{"spam_feed.activity_low_watermark": 10},
-			nilAPI:    true,
-			wantScore: 0,
-			wantErr:   true,
 		},
 		{
 			name: "Message count at or above watermark returns 0",
@@ -216,21 +194,18 @@ func TestUserActivityScore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setupViperConfig(t, tt.config)
 
-			var client slackclient.Client
-			if !tt.nilAPI {
-				client = &slackclient.MockClient{
-					SearchMessagesFn: func(query string, params slack.SearchParameters) (*slack.SearchMessages, error) {
-						if tt.searchErr != nil {
-							return nil, tt.searchErr
-						}
-						return &slack.SearchMessages{
-							Pagination: slack.Pagination{TotalCount: tt.searchTotal},
-						}, nil
-					},
-				}
+			mock := &slackclient.MockClient{
+				SearchMessagesFn: func(query string, params slack.SearchParameters) (*slack.SearchMessages, error) {
+					if tt.searchErr != nil {
+						return nil, tt.searchErr
+					}
+					return &slack.SearchMessages{
+						Pagination: slack.Pagination{TotalCount: tt.searchTotal},
+					}, nil
+				},
 			}
 
-			got, err := userActivityScore("U123", client)
+			got, err := userActivityScore("U123", mock)
 			if tt.wantErr && err == nil {
 				t.Errorf("userActivityScore() expected error, got nil")
 			}

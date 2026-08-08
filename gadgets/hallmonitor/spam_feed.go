@@ -34,21 +34,9 @@ func monitorSpamFeedMessages() *router.ChannelMessageRoute {
 	pluginRoute.Name = "hallmonitor.monitorSpamFeed"
 	pluginRoute.Pattern = `.*`
 	pluginRoute.Plugin = func(ctx router.HandlerContext, ev slackevents.MessageEvent, message string) {
-		ProcessSpamFeedMessage(ctx.Router, ctx.Route, ctx.BotClient, safeUserClient(ctx.UserClient), ev, message)
+		ProcessSpamFeedMessage(ctx.Router, ctx.Route, ctx.BotClient, ctx.UserClient, ev, message)
 	}
 	return &pluginRoute
-}
-
-// safeUserClient converts a possibly-nil *slack.Client into a slackclient.Client
-// interface value. Assigning a nil *slack.Client directly to an interface produces
-// a non-nil interface wrapping a nil pointer (Go's "typed nil" trap), which would
-// bypass nil checks downstream and panic on first use. gadget sets ctx.UserClient
-// to nil when no Slack user token is configured.
-func safeUserClient(c *slack.Client) slackclient.Client {
-	if c == nil {
-		return nil
-	}
-	return c
 }
 
 // ProcessSpamFeedMessage contains the testable core logic extracted from handleSpamFeedMessage.
@@ -186,10 +174,6 @@ func anomalyScoreInternal(opMsg slack.Message, api slackclient.Client, userApi s
 func userActivityScore(uid string, api slackclient.Client) (int, error) {
 	if viper.GetInt("spam_feed.activity_low_watermark") == 0 {
 		return 0, nil
-	}
-
-	if api == nil {
-		return 0, fmt.Errorf("spam_feed.activity_low_watermark is set but no Slack user token is configured (slack.user_oauth_token)")
 	}
 
 	searchQuery := fmt.Sprintf("after:2021/12/01 from:<@%s>", uid)
